@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Touch Sync</title>
+
+  <!-- Firebase v8 SDKs (IMPORTANT: do NOT change version) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #0f0f0f;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    #thumb {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      user-select: none;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+    }
+
+    #thumb.active {
+      background: #ff4d6d;
+      transform: scale(1.05);
+    }
+
+    #status {
+      margin-top: 30px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="thumb">Press & Hold</div>
+  <div id="status">Waiting…</div>
+
+  <script>
+    // 🔥 YOUR FIREBASE CONFIG (ALREADY FILLED)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
+      authDomain: "sunahh-43bb8.firebaseapp.com",
+      databaseURL: "https://sunahh-43bb8-default-rtdb.firebaseio.com",
+      projectId: "sunahh-43bb8",
+      storageBucket: "sunahh-43bb8.appspot.com",
+      messagingSenderId: "1018778991584",
+      appId: "1:1018778991584:web:34d11d94c1175a5f1d4985"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Same session for both users
+    const sessionId = "test-session";
+
+    // Random ID for each user
+    const userId = Math.random().toString(36).substr(2, 6);
+
+    const thumb = document.getElementById("thumb");
+    const statusText = document.getElementById("status");
+
+    const userRef = db.ref(`sessions/${sessionId}/${userId}`);
+    const sessionRef = db.ref(`sessions/${sessionId}`);
+
+    function setPressed(value) {
+      userRef.set({
+        pressed: value,
+        time: Date.now()
+      });
+    }
+
+    // Mouse events
+    thumb.addEventListener("mousedown", () => {
+      thumb.classList.add("active");
+      setPressed(true);
+    });
+
+    thumb.addEventListener("mouseup", () => {
+      thumb.classList.remove("active");
+      setPressed(false);
+    });
+
+    thumb.addEventListener("mouseleave", () => {
+      thumb.classList.remove("active");
+      setPressed(false);
+    });
+
+    // Touch events (mobile)
+    thumb.addEventListener("touchstart", () => {
+      thumb.classList.add("active");
+      setPressed(true);
+    });
+
+    thumb.addEventListener("touchend", () => {
+      thumb.classList.remove("active");
+      setPressed(false);
+    });
+
+    // Listen to session changes
+    sessionRef.on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        statusText.textContent = "Waiting…";
+        return;
+      }
+
+      let pressedCount = 0;
+      let otherPressing = false;
+
+      Object.keys(data).forEach((id) => {
+        if (data[id].pressed) {
+          pressedCount++;
+          if (id !== userId) otherPressing = true;
+        }
+      });
+
+      if (pressedCount >= 2) {
+        thumb.classList.add("active");
+        statusText.textContent = "✨ BOTH PRESSING ✨";
+      } else if (otherPressing) {
+        thumb.classList.add("active");
+        statusText.textContent = "They are pressing…";
+      } else {
+        statusText.textContent = "Waiting…";
+      }
+    });
+
+    // Cleanup when user leaves
+    window.addEventListener("beforeunload", () => {
+      userRef.remove();
+    });
+  </script>
+
+</body>
+</html>
