@@ -1,95 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Touch Sync</title>
+<meta charset="UTF-8">
+<title>Touch Sync</title>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      background: #0f0f0f;
-      font-family: Arial, sans-serif;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background: #0f0f0f;
+    font-family: Arial, sans-serif;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
 
-    #thumb {
-      width: 220px;
-      height: 220px;
-      border-radius: 50%;
-      background: #333;
-      margin-bottom: 16px;
-      transition: background 0.3s ease;
-    }
+  /* TOUCH AREA */
+  #thumb {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.3s ease, transform 0.2s ease;
+    touch-action: none;
+    pointer-events: auto;
+  }
 
-    #status {
-      font-size: 13px;
-      opacity: 0.75;
-      margin-bottom: 10px;
-      min-height: 18px;
-    }
+  @keyframes heartbeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.06); }
+    45% { transform: scale(1); }
+    65% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
 
-    #chat {
-      width: 90%;
-      max-width: 360px;
-      height: 180px;
-      overflow-y: auto;
-      background: #141414;
-      border-radius: 14px;
-      padding: 10px;
-      font-size: 13px;
-    }
+  #thumb.sync {
+    animation: heartbeat 1.2s infinite;
+  }
 
-    .msg {
-      margin-bottom: 6px;
-      opacity: 0.9;
-    }
+  #status {
+    margin-top: 16px;
+    font-size: 13px;
+    opacity: 0.75;
+    min-height: 18px;
+  }
 
-    .me { text-align: right; }
-    .other { text-align: left; }
+  /* MINI CHAT */
+  #chat {
+    margin-top: 10px;
+    width: 220px;
+    height: 60px;
+    overflow-y: auto;
+    font-size: 12px;
+    opacity: 0.6;
+    pointer-events: none; /* IMPORTANT */
+  }
 
-    #inputBox {
-      display: flex;
-      gap: 6px;
-      margin-top: 10px;
-      width: 90%;
-      max-width: 360px;
-    }
+  .msg {
+    margin-bottom: 4px;
+  }
 
-    #inputBox input {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 14px;
-      border: none;
-      outline: none;
-    }
+  .me { text-align: right; }
+  .other { text-align: left; }
 
-    #inputBox button {
-      padding: 8px 14px;
-      border-radius: 14px;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
+  #inputBox {
+    margin-top: 6px;
+    display: flex;
+    gap: 6px;
+    width: 220px;
+  }
+
+  #inputBox input {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 12px;
+    border: none;
+    font-size: 12px;
+    outline: none;
+  }
+
+  #inputBox button {
+    padding: 6px 10px;
+    border-radius: 12px;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+  }
+</style>
 </head>
+
 <body>
 
-  <div id="thumb"></div>
-  <div id="status"></div>
+<div id="thumb"></div>
+<div id="status"></div>
 
-  <div id="chat"></div>
+<div id="chat"></div>
 
-  <div id="inputBox">
-    <input id="text" placeholder="Type…" />
-    <button onclick="send()">Send</button>
-  </div>
+<div id="inputBox">
+  <input id="text" placeholder="say something…" />
+  <button onclick="send()">→</button>
+</div>
 
 <script>
   const firebaseConfig = {
@@ -107,68 +122,91 @@
 
   const sessionId = "test-session";
   const uid = Math.random().toString(36).slice(2);
+  const myColor = `hsl(${Math.floor(Math.random()*360)},70%,60%)`;
 
   const userRef = db.ref(`sessions/${sessionId}/users/${uid}`);
   const chatRef = db.ref(`sessions/${sessionId}/chat`);
-  const noteRef = db.ref(`sessions/${sessionId}/note`);
 
-  const chatBox = document.getElementById("chat");
+  const thumb = document.getElementById("thumb");
   const status = document.getElementById("status");
+  const chat = document.getElementById("chat");
   const input = document.getElementById("text");
 
-  // Presence heartbeat
+  /* PRESENCE HEARTBEAT */
   setInterval(() => {
-    userRef.update({ lastSeen: Date.now() });
+    userRef.update({ lastSeen: Date.now(), color: myColor });
   }, 5000);
 
+  /* TOUCH */
+  function setPressed(v) {
+    userRef.update({ pressed: v, lastSeen: Date.now() });
+  }
+
+  ["mousedown","touchstart"].forEach(e =>
+    thumb.addEventListener(e, () => setPressed(true))
+  );
+  ["mouseup","mouseleave","touchend","touchcancel"].forEach(e =>
+    thumb.addEventListener(e, () => setPressed(false))
+  );
+
+  /* CHAT */
   function send() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    const msg = {
-      from: uid,
-      text,
-      time: Date.now()
-    };
-
-    chatRef.push(msg);
-    noteRef.set(msg); // also store as note if offline
+    const t = input.value.trim();
+    if (!t) return;
+    chatRef.push({ from: uid, text: t, time: Date.now() });
     input.value = "";
   }
 
-  chatRef.limitToLast(50).on("child_added", snap => {
-    const m = snap.val();
-    const div = document.createElement("div");
-    div.className = "msg " + (m.from === uid ? "me" : "other");
-    div.textContent = m.text;
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
+  chatRef.limitToLast(3).on("child_added", s => {
+    const m = s.val();
+    const d = document.createElement("div");
+    d.className = "msg " + (m.from === uid ? "me" : "other");
+    d.textContent = m.text;
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
   });
 
+  /* STATE LOGIC */
   db.ref(`sessions/${sessionId}`).on("value", snap => {
     const data = snap.val();
     if (!data || !data.users) return;
 
-    const users = Object.values(data.users);
-    const other = users.find(u => u.lastSeen && u.lastSeen !== data.users[uid]?.lastSeen);
+    const me = data.users[uid];
+    let other = null;
+    Object.keys(data.users).forEach(id => {
+      if (id !== uid) other = data.users[id];
+    });
 
-    if (!other) {
-      status.textContent = "";
-      return;
+    const now = Date.now();
+    const otherOnline = other && now - other.lastSeen < 15000;
+
+    const iPress = me?.pressed;
+    const oPress = other?.pressed;
+
+    if (!iPress && !oPress) {
+      thumb.style.background = "#333";
+      thumb.classList.remove("sync");
+      status.textContent = otherOnline ? "• online" :
+        other?.lastSeen ? "last seen recently" : "";
     }
 
-    const online = Date.now() - other.lastSeen < 15000;
-    status.textContent = online ? "• online" : "last seen recently";
+    if (!iPress && oPress) {
+      thumb.style.background = other.color;
+      thumb.classList.remove("sync");
+      status.textContent = "someone is holding you";
+    }
 
-    // Show note once when coming online
-    if (data.note && data.note.from !== uid) {
-      if (!localStorage.getItem("seenNote")) {
-        const div = document.createElement("div");
-        div.className = "msg other";
-        div.textContent = data.note.text;
-        chatBox.appendChild(div);
-        localStorage.setItem("seenNote", "yes");
-      }
+    if (iPress && !oPress) {
+      thumb.style.background = me.color;
+      thumb.classList.remove("sync");
+      status.textContent = "pressing";
+    }
+
+    if (iPress && oPress) {
+      thumb.style.background =
+        `linear-gradient(135deg, ${me.color}, ${other.color})`;
+      thumb.classList.add("sync");
+      status.textContent = "💞 you’re connected right now";
     }
   });
 </script>
