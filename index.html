@@ -12,7 +12,7 @@
     margin: 0;
     height: 100vh;
     background: #0f0f0f;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: system-ui, sans-serif;
     color: white;
     display: flex;
     flex-direction: column;
@@ -20,13 +20,13 @@
     justify-content: center;
   }
 
-  /* TOUCH CIRCLE */
+  /* TOUCH */
   #thumb {
     width: 240px;
     height: 240px;
     border-radius: 50%;
     background: #333;
-    transition: background 0.3s ease, transform 0.2s ease;
+    transition: background 0.35s ease, transform 0.2s ease;
     touch-action: none;
   }
 
@@ -38,39 +38,38 @@
     100% { transform: scale(1); }
   }
 
-  #thumb.sync {
-    animation: heartbeat 1.2s infinite;
-  }
+  #thumb.sync { animation: heartbeat 1.2s infinite; }
 
   #status {
-    margin-top: 16px;
+    margin-top: 14px;
     font-size: 13px;
     opacity: 0.75;
     min-height: 18px;
     text-align: center;
   }
 
-  /* NOTE INPUT (SUBTLE) */
+  /* NOTE INPUT */
   #noteBox {
     margin-top: 18px;
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: center;
   }
 
-  #noteBox input {
-    padding: 7px 12px;
-    border-radius: 18px;
+  #noteBox input,
+  #noteBox select {
+    padding: 7px 10px;
+    border-radius: 14px;
     border: none;
-    outline: none;
     font-size: 12px;
-    width: 180px;
     background: #1a1a1a;
     color: white;
+    outline: none;
   }
 
   #noteBox button {
-    padding: 7px 12px;
-    border-radius: 18px;
+    padding: 7px 10px;
+    border-radius: 14px;
     border: none;
     font-size: 12px;
     cursor: pointer;
@@ -78,32 +77,59 @@
     color: white;
   }
 
-  /* WHOLESOME NOTE CARD */
-  #noteCard {
+  /* POPUP */
+  #notePopup {
     position: fixed;
-    bottom: 110px;
+    bottom: 120px;
     max-width: 260px;
-    padding: 14px 16px;
-    background: rgba(255,255,255,0.08);
-    backdrop-filter: blur(14px);
-    border-radius: 16px;
+    padding: 16px;
+    border-radius: 18px;
     text-align: center;
     font-size: 14px;
-    line-height: 1.4;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 0.4s ease, transform 0.4s ease;
     pointer-events: none;
   }
 
-  #noteCard.show {
+  #notePopup.show {
     opacity: 1;
     transform: translateY(0);
   }
 
-  #noteCard .hint {
-    margin-top: 8px;
+  /* MOODS */
+  .love {
+    background: #ff7aa2;
+    box-shadow: 0 0 30px #ff7aa255;
+  }
+
+  .joy {
+    background: #ffd86b;
+    color: #2b2b2b;
+    animation: glow 1.5s infinite;
+  }
+
+  .angry {
+    background: #ff4b3a;
+    animation: shake 0.4s infinite;
+  }
+
+  @keyframes glow {
+    0% { box-shadow: 0 0 10px #ffd86b66; }
+    50% { box-shadow: 0 0 25px #ffd86bcc; }
+    100% { box-shadow: 0 0 10px #ffd86b66; }
+  }
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+  }
+
+  #seen {
+    margin-top: 6px;
     font-size: 11px;
     opacity: 0.6;
   }
@@ -115,17 +141,21 @@
 <div id="thumb"></div>
 <div id="status"></div>
 
-<!-- Leave a note -->
 <div id="noteBox">
-  <input id="noteInput" placeholder="leave a little note…" />
+  <input id="noteInput" placeholder="leave a note…" />
+  <select id="mood">
+    <option value="love">❤️ love</option>
+    <option value="joy">😄 joy</option>
+    <option value="angry">😡 angry</option>
+  </select>
   <button onclick="sendNote()">→</button>
 </div>
 
-<!-- Floating wholesome note -->
-<div id="noteCard">
+<div id="notePopup">
   <div id="noteText"></div>
-  <div class="hint">left for you</div>
 </div>
+
+<div id="seen"></div>
 
 <script>
   const firebaseConfig = {
@@ -151,10 +181,11 @@
 
   const thumb = document.getElementById("thumb");
   const status = document.getElementById("status");
-  const noteCard = document.getElementById("noteCard");
+  const popup = document.getElementById("notePopup");
   const noteText = document.getElementById("noteText");
+  const seen = document.getElementById("seen");
 
-  /* Presence heartbeat */
+  /* Presence */
   setInterval(() => {
     userRef.update({ lastSeen: Date.now(), color: myColor });
   }, 5000);
@@ -171,65 +202,25 @@
     thumb.addEventListener(e, () => setPressed(false))
   );
 
-  /* Send note */
-  function sendNote() {
-    const text = document.getElementById("noteInput").value.trim();
-    if (!text) return;
-
-    noteRef.set({
-      text,
-      id: Date.now()
-    });
-
-    document.getElementById("noteInput").value = "";
-  }
-
-  /* Show note once */
-  noteRef.on("value", snap => {
-    const note = snap.val();
-    if (!note) return;
-
-    if (note.id.toString() !== localStorage.getItem("seenNoteId")) {
-      noteText.textContent = note.text;
-      noteCard.classList.add("show");
-      localStorage.setItem("seenNoteId", note.id);
-
-      setTimeout(() => {
-        noteCard.classList.remove("show");
-      }, 4500);
-    }
-  });
-
-  /* State logic */
+  /* Touch state */
   sessionRef.on("value", snap => {
     const data = snap.val();
     if (!data || !data.users) return;
 
-    let iPress = false;
-    let otherPress = false;
-    let otherColor = null;
-    let otherOnline = false;
+    let iPress = false, otherPress = false, otherColor = null, otherOnline = false;
 
-    Object.entries(data.users).forEach(([id, u]) => {
-      if (id === uid) {
-        iPress = !!u.pressed;
-      } else {
-        if (u.pressed) {
-          otherPress = true;
-          otherColor = u.color;
-        }
-        if (u.lastSeen && Date.now() - u.lastSeen < 15000) {
-          otherOnline = true;
-        }
+    Object.entries(data.users).forEach(([id,u]) => {
+      if (id === uid) iPress = !!u.pressed;
+      else {
+        if (u.pressed) { otherPress = true; otherColor = u.color; }
+        if (u.lastSeen && Date.now() - u.lastSeen < 15000) otherOnline = true;
       }
     });
 
     if (!iPress && !otherPress) {
       thumb.style.background = "#333";
       thumb.classList.remove("sync");
-      if (!noteCard.classList.contains("show")) {
-        status.textContent = otherOnline ? "• online" : "last seen recently";
-      }
+      status.textContent = otherOnline ? "• online" : "last seen recently";
     }
 
     if (!iPress && otherPress) {
@@ -245,10 +236,52 @@
     }
 
     if (iPress && otherPress) {
-      thumb.style.background =
-        `linear-gradient(135deg, ${myColor}, ${otherColor})`;
+      thumb.style.background = `linear-gradient(135deg, ${myColor}, ${otherColor})`;
       thumb.classList.add("sync");
       status.textContent = "💞 you’re connected right now";
+    }
+  });
+
+  /* Send note */
+  function sendNote() {
+    const text = noteInput.value.trim();
+    const mood = document.getElementById("mood").value;
+    if (!text) return;
+
+    noteRef.set({
+      text,
+      mood,
+      from: uid,
+      id: Date.now(),
+      read: false
+    });
+
+    noteInput.value = "";
+    seen.textContent = "";
+  }
+
+  /* Show note ONLY on open */
+  const openedAt = Date.now();
+
+  noteRef.once("value").then(snap => {
+    const note = snap.val();
+    if (!note) return;
+    if (note.from === uid) return;
+    if (note.read) return;
+    if (note.id < openedAt - 1000) return;
+
+    popup.className = note.mood + " show";
+    noteText.textContent = note.text;
+    noteRef.update({ read: true });
+
+    setTimeout(() => popup.classList.remove("show"), 4500);
+  });
+
+  /* Seen indicator */
+  noteRef.on("value", snap => {
+    const note = snap.val();
+    if (note && note.from === uid && note.read) {
+      seen.textContent = "seen";
     }
   });
 </script>
