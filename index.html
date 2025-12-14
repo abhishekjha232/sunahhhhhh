@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Touch Sync</title>
 
-  <!-- Firebase v8 SDKs (IMPORTANT: do NOT change version) -->
+  <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
@@ -22,38 +22,47 @@
     }
 
     #thumb {
-      width: 220px;
-      height: 220px;
+      width: 230px;
+      height: 230px;
       border-radius: 50%;
       background: #333;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 22px;
+      font-size: 20px;
       user-select: none;
       cursor: pointer;
-      transition: background 0.2s ease, transform 0.1s ease;
+      transition: background 0.4s ease, transform 0.2s ease;
     }
 
-    #thumb.active {
-      background: #ff4d6d;
-      transform: scale(1.05);
+    /* Heartbeat animation */
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      25% { transform: scale(1.06); }
+      40% { transform: scale(1); }
+      60% { transform: scale(1.08); }
+      100% { transform: scale(1); }
     }
 
-    #status {
-      margin-top: 30px;
-      font-size: 14px;
-      opacity: 0.8;
+    #thumb.sync {
+      animation: heartbeat 1.2s infinite;
+    }
+
+    #presence {
+      margin-top: 28px;
+      font-size: 13px;
+      opacity: 0.75;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <div id="thumb">Press & Hold</div>
-  <div id="status">Waiting…</div>
+  <div id="thumb"></div>
+  <div id="presence"></div>
 
   <script>
-    // 🔥 YOUR FIREBASE CONFIG (ALREADY FILLED)
+    // 🔥 Firebase config (yours)
     const firebaseConfig = {
       apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
       authDomain: "sunahh-43bb8.firebaseapp.com",
@@ -64,88 +73,97 @@
       appId: "1:1018778991584:web:34d11d94c1175a5f1d4985"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Same session for both users
     const sessionId = "test-session";
-
-    // Random ID for each user
     const userId = Math.random().toString(36).substr(2, 6);
 
-    const thumb = document.getElementById("thumb");
-    const statusText = document.getElementById("status");
+    const myColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 60%)`;
 
-    const userRef = db.ref(`sessions/${sessionId}/${userId}`);
+    const thumb = document.getElementById("thumb");
+    const presence = document.getElementById("presence");
+
+    const userRef = db.ref(`sessions/${sessionId}/users/${userId}`);
     const sessionRef = db.ref(`sessions/${sessionId}`);
 
     function setPressed(value) {
+      const now = Date.now();
       userRef.set({
         pressed: value,
-        time: Date.now()
+        color: myColor,
+        online: true,
+        lastSeen: now
       });
+
+      if (value) {
+        sessionRef.child("lastTouch").set(now);
+      }
     }
 
-    // Mouse events
-    thumb.addEventListener("mousedown", () => {
-      thumb.classList.add("active");
-      setPressed(true);
-    });
+    // Touch + mouse
+    ["mousedown","touchstart"].forEach(evt =>
+      thumb.addEventListener(evt, () => setPressed(true))
+    );
+    ["mouseup","mouseleave","touchend"].forEach(evt =>
+      thumb.addEventListener(evt, () => setPressed(false))
+    );
 
-    thumb.addEventListener("mouseup", () => {
-      thumb.classList.remove("active");
-      setPressed(false);
-    });
+    function timeAgo(ms) {
+      const d = Math.floor((Date.now() - ms) / 60000);
+      if (d < 1) return "just now";
+      if (d < 60) return `${d} min ago`;
+      return `${Math.floor(d / 60)} hr ago`;
+    }
 
-    thumb.addEventListener("mouseleave", () => {
-      thumb.classList.remove("active");
-      setPressed(false);
-    });
+    sessionRef.on("value", snap => {
+      const data = snap.val();
+      if (!data || !data.users) return;
 
-    // Touch events (mobile)
-    thumb.addEventListener("touchstart", () => {
-      thumb.classList.add("active");
-      setPressed(true);
-    });
+      const users = data.users;
+      let pressedUsers = [];
+      let othersOnline = false;
+      let lastSeenOther = null;
 
-    thumb.addEventListener("touchend", () => {
-      thumb.classList.remove("active");
-      setPressed(false);
-    });
-
-    // Listen to session changes
-    sessionRef.on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        statusText.textContent = "Waiting…";
-        return;
-      }
-
-      let pressedCount = 0;
-      let otherPressing = false;
-
-      Object.keys(data).forEach((id) => {
-        if (data[id].pressed) {
-          pressedCount++;
-          if (id !== userId) otherPressing = true;
+      Object.keys(users).forEach(id => {
+        if (users[id].pressed) pressedUsers.push(users[id]);
+        if (id !== userId && users[id].online) {
+          othersOnline = true;
+          lastSeenOther = users[id].lastSeen;
         }
       });
 
-      if (pressedCount >= 2) {
-        thumb.classList.add("active");
-        statusText.textContent = "✨ BOTH PRESSING ✨";
-      } else if (otherPressing) {
-        thumb.classList.add("active");
-        statusText.textContent = "They are pressing…";
+      // 🎨 Color logic
+      if (pressedUsers.length === 1) {
+        thumb.style.background = pressedUsers[0].color;
+        thumb.classList.remove("sync");
+      }
+
+      if (pressedUsers.length >= 2) {
+        const c1 = pressedUsers[0].color;
+        const c2 = pressedUsers[1].color;
+        thumb.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+        thumb.classList.add("sync");
+      }
+
+      if (pressedUsers.length === 0) {
+        thumb.style.background = "#333";
+        thumb.classList.remove("sync");
+      }
+
+      // 🌙 Presence
+      if (othersOnline) {
+        presence.textContent = "• online";
+      } else if (lastSeenOther) {
+        presence.textContent = "last seen " + timeAgo(lastSeenOther);
       } else {
-        statusText.textContent = "Waiting…";
+        presence.textContent = "";
       }
     });
 
-    // Cleanup when user leaves
+    // Cleanup
     window.addEventListener("beforeunload", () => {
-      userRef.remove();
+      userRef.update({ online: false });
     });
   </script>
 
