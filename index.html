@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Touch Sync</title>
+<title>Touch</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -12,7 +12,7 @@
     margin: 0;
     height: 100vh;
     background: #0f0f0f;
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: white;
     display: flex;
     flex-direction: column;
@@ -20,7 +20,7 @@
     justify-content: center;
   }
 
-  /* TOUCH AREA */
+  /* TOUCH CIRCLE */
   #thumb {
     width: 240px;
     height: 240px;
@@ -28,7 +28,6 @@
     background: #333;
     transition: background 0.3s ease, transform 0.2s ease;
     touch-action: none;
-    pointer-events: auto;
   }
 
   @keyframes heartbeat {
@@ -48,48 +47,65 @@
     font-size: 13px;
     opacity: 0.75;
     min-height: 18px;
+    text-align: center;
   }
 
-  /* MINI CHAT */
-  #chat {
-    margin-top: 10px;
-    width: 220px;
-    height: 60px;
-    overflow-y: auto;
-    font-size: 12px;
-    opacity: 0.6;
-    pointer-events: none; /* IMPORTANT */
-  }
-
-  .msg {
-    margin-bottom: 4px;
-  }
-
-  .me { text-align: right; }
-  .other { text-align: left; }
-
-  #inputBox {
-    margin-top: 6px;
+  /* NOTE INPUT (SUBTLE) */
+  #noteBox {
+    margin-top: 18px;
     display: flex;
-    gap: 6px;
-    width: 220px;
+    gap: 8px;
   }
 
-  #inputBox input {
-    flex: 1;
-    padding: 6px 10px;
-    border-radius: 12px;
+  #noteBox input {
+    padding: 7px 12px;
+    border-radius: 18px;
     border: none;
-    font-size: 12px;
     outline: none;
+    font-size: 12px;
+    width: 180px;
+    background: #1a1a1a;
+    color: white;
   }
 
-  #inputBox button {
-    padding: 6px 10px;
-    border-radius: 12px;
+  #noteBox button {
+    padding: 7px 12px;
+    border-radius: 18px;
     border: none;
     font-size: 12px;
     cursor: pointer;
+    background: #2a2a2a;
+    color: white;
+  }
+
+  /* WHOLESOME NOTE CARD */
+  #noteCard {
+    position: fixed;
+    bottom: 110px;
+    max-width: 260px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(14px);
+    border-radius: 16px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.4;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: none;
+  }
+
+  #noteCard.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  #noteCard .hint {
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.6;
   }
 </style>
 </head>
@@ -99,11 +115,16 @@
 <div id="thumb"></div>
 <div id="status"></div>
 
-<div id="chat"></div>
+<!-- Leave a note -->
+<div id="noteBox">
+  <input id="noteInput" placeholder="leave a little note…" />
+  <button onclick="sendNote()">→</button>
+</div>
 
-<div id="inputBox">
-  <input id="text" placeholder="say something…" />
-  <button onclick="send()">→</button>
+<!-- Floating wholesome note -->
+<div id="noteCard">
+  <div id="noteText"></div>
+  <div class="hint">left for you</div>
 </div>
 
 <script>
@@ -120,24 +141,25 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const sessionId = "test-session";
+  const sessionId = "touch-session";
   const uid = Math.random().toString(36).slice(2);
   const myColor = `hsl(${Math.floor(Math.random()*360)},70%,60%)`;
 
   const userRef = db.ref(`sessions/${sessionId}/users/${uid}`);
-  const chatRef = db.ref(`sessions/${sessionId}/chat`);
+  const sessionRef = db.ref(`sessions/${sessionId}`);
+  const noteRef = sessionRef.child("note");
 
   const thumb = document.getElementById("thumb");
   const status = document.getElementById("status");
-  const chat = document.getElementById("chat");
-  const input = document.getElementById("text");
+  const noteCard = document.getElementById("noteCard");
+  const noteText = document.getElementById("noteText");
 
-  /* PRESENCE HEARTBEAT */
+  /* Presence heartbeat */
   setInterval(() => {
     userRef.update({ lastSeen: Date.now(), color: myColor });
   }, 5000);
 
-  /* TOUCH */
+  /* Touch */
   function setPressed(v) {
     userRef.update({ pressed: v, lastSeen: Date.now() });
   }
@@ -149,62 +171,82 @@
     thumb.addEventListener(e, () => setPressed(false))
   );
 
-  /* CHAT */
-  function send() {
-    const t = input.value.trim();
-    if (!t) return;
-    chatRef.push({ from: uid, text: t, time: Date.now() });
-    input.value = "";
+  /* Send note */
+  function sendNote() {
+    const text = document.getElementById("noteInput").value.trim();
+    if (!text) return;
+
+    noteRef.set({
+      text,
+      id: Date.now()
+    });
+
+    document.getElementById("noteInput").value = "";
   }
 
-  chatRef.limitToLast(3).on("child_added", s => {
-    const m = s.val();
-    const d = document.createElement("div");
-    d.className = "msg " + (m.from === uid ? "me" : "other");
-    d.textContent = m.text;
-    chat.appendChild(d);
-    chat.scrollTop = chat.scrollHeight;
+  /* Show note once */
+  noteRef.on("value", snap => {
+    const note = snap.val();
+    if (!note) return;
+
+    if (note.id.toString() !== localStorage.getItem("seenNoteId")) {
+      noteText.textContent = note.text;
+      noteCard.classList.add("show");
+      localStorage.setItem("seenNoteId", note.id);
+
+      setTimeout(() => {
+        noteCard.classList.remove("show");
+      }, 4500);
+    }
   });
 
-  /* STATE LOGIC */
-  db.ref(`sessions/${sessionId}`).on("value", snap => {
+  /* State logic */
+  sessionRef.on("value", snap => {
     const data = snap.val();
     if (!data || !data.users) return;
 
-    const me = data.users[uid];
-    let other = null;
-    Object.keys(data.users).forEach(id => {
-      if (id !== uid) other = data.users[id];
+    let iPress = false;
+    let otherPress = false;
+    let otherColor = null;
+    let otherOnline = false;
+
+    Object.entries(data.users).forEach(([id, u]) => {
+      if (id === uid) {
+        iPress = !!u.pressed;
+      } else {
+        if (u.pressed) {
+          otherPress = true;
+          otherColor = u.color;
+        }
+        if (u.lastSeen && Date.now() - u.lastSeen < 15000) {
+          otherOnline = true;
+        }
+      }
     });
 
-    const now = Date.now();
-    const otherOnline = other && now - other.lastSeen < 15000;
-
-    const iPress = me?.pressed;
-    const oPress = other?.pressed;
-
-    if (!iPress && !oPress) {
+    if (!iPress && !otherPress) {
       thumb.style.background = "#333";
       thumb.classList.remove("sync");
-      status.textContent = otherOnline ? "• online" :
-        other?.lastSeen ? "last seen recently" : "";
+      if (!noteCard.classList.contains("show")) {
+        status.textContent = otherOnline ? "• online" : "last seen recently";
+      }
     }
 
-    if (!iPress && oPress) {
-      thumb.style.background = other.color;
+    if (!iPress && otherPress) {
+      thumb.style.background = otherColor;
       thumb.classList.remove("sync");
       status.textContent = "someone is holding you";
     }
 
-    if (iPress && !oPress) {
-      thumb.style.background = me.color;
+    if (iPress && !otherPress) {
+      thumb.style.background = myColor;
       thumb.classList.remove("sync");
       status.textContent = "pressing";
     }
 
-    if (iPress && oPress) {
+    if (iPress && otherPress) {
       thumb.style.background =
-        `linear-gradient(135deg, ${me.color}, ${other.color})`;
+        `linear-gradient(135deg, ${myColor}, ${otherColor})`;
       thumb.classList.add("sync");
       status.textContent = "💞 you’re connected right now";
     }
