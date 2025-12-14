@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Touch Sync</title>
 
-  <!-- Firebase v8 -->
+  <!-- Firebase v8 SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
@@ -22,25 +22,18 @@
     }
 
     #thumb {
-      width: 230px;
-      height: 230px;
+      width: 240px;
+      height: 240px;
       border-radius: 50%;
       background: #333;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 20px;
-      user-select: none;
-      cursor: pointer;
       transition: background 0.4s ease, transform 0.2s ease;
     }
 
-    /* Heartbeat animation */
     @keyframes heartbeat {
       0% { transform: scale(1); }
       25% { transform: scale(1.06); }
-      40% { transform: scale(1); }
-      60% { transform: scale(1.08); }
+      45% { transform: scale(1); }
+      65% { transform: scale(1.08); }
       100% { transform: scale(1); }
     }
 
@@ -48,21 +41,22 @@
       animation: heartbeat 1.2s infinite;
     }
 
-    #presence {
-      margin-top: 28px;
-      font-size: 13px;
-      opacity: 0.75;
+    #message {
+      margin-top: 24px;
+      font-size: 14px;
+      opacity: 0.85;
       text-align: center;
+      min-height: 18px;
     }
   </style>
 </head>
 <body>
 
   <div id="thumb"></div>
-  <div id="presence"></div>
+  <div id="message"></div>
 
   <script>
-    // 🔥 Firebase config (yours)
+    /* 🔥 Firebase config */
     const firebaseConfig = {
       apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
       authDomain: "sunahh-43bb8.firebaseapp.com",
@@ -78,35 +72,48 @@
 
     const sessionId = "test-session";
     const userId = Math.random().toString(36).substr(2, 6);
-
     const myColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 60%)`;
 
     const thumb = document.getElementById("thumb");
-    const presence = document.getElementById("presence");
+    const message = document.getElementById("message");
 
     const userRef = db.ref(`sessions/${sessionId}/users/${userId}`);
     const sessionRef = db.ref(`sessions/${sessionId}`);
+    const connectedRef = db.ref(".info/connected");
 
-    function setPressed(value) {
-      const now = Date.now();
-      userRef.set({
-        pressed: value,
-        color: myColor,
-        online: true,
-        lastSeen: now
+    /* ✅ Proper online / last seen handling */
+    connectedRef.on("value", snap => {
+      if (snap.val() === true) {
+        userRef.onDisconnect().update({
+          online: false,
+          lastSeen: Date.now()
+        });
+
+        userRef.update({
+          online: true,
+          lastSeen: Date.now(),
+          pressed: false,
+          color: myColor
+        });
+      }
+    });
+
+    function setPressed(val) {
+      userRef.update({
+        pressed: val,
+        lastSeen: Date.now()
       });
 
-      if (value) {
-        sessionRef.child("lastTouch").set(now);
+      if (val) {
+        sessionRef.child("lastTouch").set(Date.now());
       }
     }
 
-    // Touch + mouse
-    ["mousedown","touchstart"].forEach(evt =>
-      thumb.addEventListener(evt, () => setPressed(true))
+    ["mousedown","touchstart"].forEach(e =>
+      thumb.addEventListener(e, () => setPressed(true))
     );
-    ["mouseup","mouseleave","touchend"].forEach(evt =>
-      thumb.addEventListener(evt, () => setPressed(false))
+    ["mouseup","mouseleave","touchend"].forEach(e =>
+      thumb.addEventListener(e, () => setPressed(false))
     );
 
     function timeAgo(ms) {
@@ -121,49 +128,43 @@
       if (!data || !data.users) return;
 
       const users = data.users;
-      let pressedUsers = [];
-      let othersOnline = false;
-      let lastSeenOther = null;
+      let pressed = [];
+      let otherOnline = false;
+      let otherLastSeen = null;
 
       Object.keys(users).forEach(id => {
-        if (users[id].pressed) pressedUsers.push(users[id]);
-        if (id !== userId && users[id].online) {
-          othersOnline = true;
-          lastSeenOther = users[id].lastSeen;
+        if (users[id].pressed) pressed.push(users[id]);
+        if (id !== userId) {
+          if (users[id].online) otherOnline = true;
+          otherLastSeen = users[id].lastSeen;
         }
       });
 
-      // 🎨 Color logic
-      if (pressedUsers.length === 1) {
-        thumb.style.background = pressedUsers[0].color;
-        thumb.classList.remove("sync");
-      }
-
-      if (pressedUsers.length >= 2) {
-        const c1 = pressedUsers[0].color;
-        const c2 = pressedUsers[1].color;
-        thumb.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
-        thumb.classList.add("sync");
-      }
-
-      if (pressedUsers.length === 0) {
+      /* 🎨 Visual logic */
+      if (pressed.length === 0) {
         thumb.style.background = "#333";
         thumb.classList.remove("sync");
+        if (otherOnline) {
+          message.textContent = "• online";
+        } else if (otherLastSeen) {
+          message.textContent = "last seen " + timeAgo(otherLastSeen);
+        } else {
+          message.textContent = "";
+        }
       }
 
-      // 🌙 Presence
-      if (othersOnline) {
-        presence.textContent = "• online";
-      } else if (lastSeenOther) {
-        presence.textContent = "last seen " + timeAgo(lastSeenOther);
-      } else {
-        presence.textContent = "";
+      if (pressed.length === 1) {
+        thumb.style.background = pressed[0].color;
+        thumb.classList.remove("sync");
+        message.textContent = "someone is holding you";
       }
-    });
 
-    // Cleanup
-    window.addEventListener("beforeunload", () => {
-      userRef.update({ online: false });
+      if (pressed.length >= 2) {
+        thumb.style.background =
+          `linear-gradient(135deg, ${pressed[0].color}, ${pressed[1].color})`;
+        thumb.classList.add("sync");
+        message.textContent = "💞 you’re connected right now";
+      }
     });
   </script>
 
