@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Touch</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -11,7 +11,7 @@
   body {
     margin: 0;
     height: 100vh;
-    background: #0f0f0f;
+    background: radial-gradient(circle at center, #151515, #0f0f0f);
     font-family: system-ui, sans-serif;
     color: white;
     display: flex;
@@ -20,35 +20,32 @@
     justify-content: center;
   }
 
-  /* TOUCH */
   #thumb {
     width: 240px;
     height: 240px;
     border-radius: 50%;
     background: #333;
-    transition: background 0.35s ease, transform 0.2s ease;
+    transition: background 6s ease, transform 0.3s ease;
     touch-action: none;
   }
 
-  @keyframes heartbeat {
+  @keyframes breathe {
     0% { transform: scale(1); }
-    25% { transform: scale(1.06); }
-    45% { transform: scale(1); }
-    65% { transform: scale(1.08); }
+    50% { transform: scale(1.05); }
     100% { transform: scale(1); }
   }
 
-  #thumb.sync { animation: heartbeat 1.2s infinite; }
+  #thumb.sync {
+    animation: breathe 6s infinite;
+  }
 
   #status {
     margin-top: 14px;
     font-size: 13px;
-    opacity: 0.75;
+    opacity: 0.65;
     min-height: 18px;
-    text-align: center;
   }
 
-  /* NOTE INPUT */
   #noteBox {
     margin-top: 18px;
     display: flex;
@@ -77,7 +74,6 @@
     color: white;
   }
 
-  /* POPUP */
   #notePopup {
     position: fixed;
     bottom: 120px;
@@ -97,28 +93,9 @@
     transform: translateY(0);
   }
 
-  /* MOODS */
-  .love {
-    background: #ff7aa2;
-    box-shadow: 0 0 30px #ff7aa255;
-  }
-
-  .joy {
-    background: #ffd86b;
-    color: #2b2b2b;
-    animation: glow 1.5s infinite;
-  }
-
-  .angry {
-    background: #ff4b3a;
-    animation: shake 0.4s infinite;
-  }
-
-  @keyframes glow {
-    0% { box-shadow: 0 0 10px #ffd86b66; }
-    50% { box-shadow: 0 0 25px #ffd86bcc; }
-    100% { box-shadow: 0 0 10px #ffd86b66; }
-  }
+  .love { background: #ff7aa2; }
+  .joy { background: #ffd86b; color: #2b2b2b; }
+  .angry { background: #ff4b3a; animation: shake 0.4s 1; }
 
   @keyframes shake {
     0% { transform: translateX(0); }
@@ -126,12 +103,6 @@
     50% { transform: translateX(3px); }
     75% { transform: translateX(-3px); }
     100% { transform: translateX(0); }
-  }
-
-  #seen {
-    margin-top: 6px;
-    font-size: 11px;
-    opacity: 0.6;
   }
 </style>
 </head>
@@ -142,11 +113,11 @@
 <div id="status"></div>
 
 <div id="noteBox">
-  <input id="noteInput" placeholder="leave a note…" />
+  <input id="noteInput" placeholder="leave a thought…" />
   <select id="mood">
-    <option value="love">❤️ love</option>
-    <option value="joy">😄 joy</option>
-    <option value="angry">😡 angry</option>
+    <option value="love">love</option>
+    <option value="joy">joy</option>
+    <option value="angry">anger</option>
   </select>
   <button onclick="sendNote()">→</button>
 </div>
@@ -155,9 +126,16 @@
   <div id="noteText"></div>
 </div>
 
-<div id="seen"></div>
-
 <script>
+  const allowedUsers = ["abhishek", "sana"];
+  const uid = location.hash.replace("#", "").toLowerCase();
+
+  if (!allowedUsers.includes(uid)) {
+    document.body.innerHTML =
+      "<div style='opacity:.6;font-size:14px'>This space is private.</div>";
+    throw new Error("Access denied");
+  }
+
   const firebaseConfig = {
     apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
     authDomain: "sunahh-43bb8.firebaseapp.com",
@@ -171,9 +149,10 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const sessionId = "touch-session";
-  const uid = Math.random().toString(36).slice(2);
-  const myColor = `hsl(${Math.floor(Math.random()*360)},70%,60%)`;
+  const sessionId = "abhishek-sana";
+  const myColor = uid === "abhishek"
+    ? "hsl(210,70%,60%)"
+    : "hsl(330,70%,65%)";
 
   const userRef = db.ref(`sessions/${sessionId}/users/${uid}`);
   const sessionRef = db.ref(`sessions/${sessionId}`);
@@ -183,66 +162,68 @@
   const status = document.getElementById("status");
   const popup = document.getElementById("notePopup");
   const noteText = document.getElementById("noteText");
-  const seen = document.getElementById("seen");
 
-  /* Presence */
   setInterval(() => {
     userRef.update({ lastSeen: Date.now(), color: myColor });
   }, 5000);
 
-  /* Touch */
-  function setPressed(v) {
-    userRef.update({ pressed: v, lastSeen: Date.now() });
+  let pressTimer;
+
+  function startPress() {
+    pressTimer = setTimeout(() => {
+      userRef.update({ pressed: true });
+    }, 1500);
+  }
+
+  function endPress() {
+    clearTimeout(pressTimer);
+    userRef.update({ pressed: false });
   }
 
   ["mousedown","touchstart"].forEach(e =>
-    thumb.addEventListener(e, () => setPressed(true))
+    thumb.addEventListener(e, startPress)
   );
   ["mouseup","mouseleave","touchend","touchcancel"].forEach(e =>
-    thumb.addEventListener(e, () => setPressed(false))
+    thumb.addEventListener(e, endPress)
   );
 
-  /* Touch state */
   sessionRef.on("value", snap => {
     const data = snap.val();
     if (!data || !data.users) return;
 
-    let iPress = false, otherPress = false, otherColor = null, otherOnline = false;
+    const me = data.users[uid];
+    const otherId = uid === "abhishek" ? "sana" : "abhishek";
+    const other = data.users[otherId];
 
-    Object.entries(data.users).forEach(([id,u]) => {
-      if (id === uid) iPress = !!u.pressed;
-      else {
-        if (u.pressed) { otherPress = true; otherColor = u.color; }
-        if (u.lastSeen && Date.now() - u.lastSeen < 15000) otherOnline = true;
-      }
-    });
+    const iPress = me?.pressed;
+    const otherPress = other?.pressed;
 
     if (!iPress && !otherPress) {
       thumb.style.background = "#333";
       thumb.classList.remove("sync");
-      status.textContent = otherOnline ? "• online" : "last seen recently";
+      status.textContent = "";
     }
 
     if (!iPress && otherPress) {
-      thumb.style.background = otherColor;
+      thumb.style.background = other.color;
       thumb.classList.remove("sync");
-      status.textContent = "someone is holding you";
+      status.textContent = "here";
     }
 
     if (iPress && !otherPress) {
       thumb.style.background = myColor;
       thumb.classList.remove("sync");
-      status.textContent = "pressing";
+      status.textContent = "";
     }
 
     if (iPress && otherPress) {
-      thumb.style.background = `linear-gradient(135deg, ${myColor}, ${otherColor})`;
+      thumb.style.background =
+        `linear-gradient(135deg, ${myColor}, ${other.color})`;
       thumb.classList.add("sync");
-      status.textContent = "💞 you’re connected right now";
+      status.textContent = "with you";
     }
   });
 
-  /* Send note */
   function sendNote() {
     const text = noteInput.value.trim();
     const mood = document.getElementById("mood").value;
@@ -252,37 +233,25 @@
       text,
       mood,
       from: uid,
-      id: Date.now(),
-      read: false
+      id: Date.now()
     });
 
     noteInput.value = "";
-    seen.textContent = "";
   }
 
-  /* Show note ONLY on open */
   const openedAt = Date.now();
 
   noteRef.once("value").then(snap => {
     const note = snap.val();
-    if (!note) return;
-    if (note.from === uid) return;
-    if (note.read) return;
-    if (note.id < openedAt - 1000) return;
+    if (!note || note.from === uid || note.id < openedAt) return;
 
     popup.className = note.mood + " show";
     noteText.textContent = note.text;
-    noteRef.update({ read: true });
 
-    setTimeout(() => popup.classList.remove("show"), 4500);
-  });
-
-  /* Seen indicator */
-  noteRef.on("value", snap => {
-    const note = snap.val();
-    if (note && note.from === uid && note.read) {
-      seen.textContent = "seen";
-    }
+    setTimeout(() => {
+      popup.classList.remove("show");
+      noteRef.remove();
+    }, 4500);
   });
 </script>
 
