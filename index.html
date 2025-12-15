@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Touch</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -10,28 +11,30 @@
 <style>
   body {
     margin: 0;
-    height: 100vh;
-    background: radial-gradient(circle at center, #151515, #0f0f0f);
+    min-height: 100vh;
+    background: radial-gradient(circle at center, #181818, #0e0e0e);
     font-family: system-ui, sans-serif;
     color: white;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 24px 16px;
+    box-sizing: border-box;
   }
 
   #thumb {
-    width: 240px;
-    height: 240px;
+    width: 280px;
+    height: 280px;
     border-radius: 50%;
     background: #333;
-    transition: background 6s ease, transform 0.3s ease;
+    transition: background 5s ease, transform 0.3s ease;
     touch-action: none;
   }
 
   @keyframes breathe {
     0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    50% { transform: scale(1.06); }
     100% { transform: scale(1); }
   }
 
@@ -40,57 +43,70 @@
   }
 
   #status {
-    margin-top: 14px;
-    font-size: 13px;
-    opacity: 0.65;
-    min-height: 18px;
-  }
-
-  #noteBox {
     margin-top: 18px;
-    display: flex;
-    gap: 6px;
-    align-items: center;
+    font-size: 15px;
+    opacity: 0.7;
+    min-height: 20px;
   }
 
-  #noteBox input,
-  #noteBox select {
-    padding: 7px 10px;
-    border-radius: 14px;
+  /* NOTES */
+  #noteBox {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 28px;
+    display: flex;
+    gap: 8px;
+  }
+
+  #noteInput {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 18px;
     border: none;
-    font-size: 12px;
-    background: #1a1a1a;
+    font-size: 14px;
+    background: #1c1c1c;
     color: white;
     outline: none;
   }
 
-  #noteBox button {
-    padding: 7px 10px;
-    border-radius: 14px;
+  #mood {
+    padding: 12px;
+    border-radius: 18px;
     border: none;
-    font-size: 12px;
-    cursor: pointer;
-    background: #2a2a2a;
+    font-size: 14px;
+    background: #1c1c1c;
     color: white;
   }
 
+  #noteBox button {
+    padding: 12px 16px;
+    border-radius: 18px;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    background: #2b2b2b;
+    color: white;
+  }
+
+  /* POPUP */
   #notePopup {
     position: fixed;
-    bottom: 120px;
-    max-width: 260px;
-    padding: 16px;
-    border-radius: 18px;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    max-width: 80%;
+    padding: 18px;
+    border-radius: 22px;
     text-align: center;
-    font-size: 14px;
+    font-size: 15px;
     opacity: 0;
-    transform: translateY(10px);
     transition: opacity 0.4s ease, transform 0.4s ease;
     pointer-events: none;
   }
 
   #notePopup.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
 
   .love { background: #ff7aa2; }
@@ -98,11 +114,11 @@
   .angry { background: #ff4b3a; animation: shake 0.4s 1; }
 
   @keyframes shake {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-3px); }
-    50% { transform: translateX(3px); }
-    75% { transform: translateX(-3px); }
-    100% { transform: translateX(0); }
+    0% { transform: translateX(-50%) translateY(0); }
+    25% { transform: translateX(-52%) translateY(0); }
+    50% { transform: translateX(-48%) translateY(0); }
+    75% { transform: translateX(-52%) translateY(0); }
+    100% { transform: translateX(-50%) translateY(0); }
   }
 </style>
 </head>
@@ -115,40 +131,33 @@
 <div id="noteBox">
   <input id="noteInput" placeholder="leave a thought…" />
   <select id="mood">
-    <option value="love">love</option>
-    <option value="joy">joy</option>
-    <option value="angry">anger</option>
+    <option value="love">❤️</option>
+    <option value="joy">😄</option>
+    <option value="angry">😡</option>
   </select>
   <button onclick="sendNote()">→</button>
 </div>
 
-<div id="notePopup">
-  <div id="noteText"></div>
-</div>
+<div id="notePopup"><div id="noteText"></div></div>
 
 <script>
+  /* ACCESS */
   const allowedUsers = ["abhishek", "sana"];
-  const uid = location.hash.replace("#", "").toLowerCase();
-
+  const uid = location.hash.replace("#","").toLowerCase();
   if (!allowedUsers.includes(uid)) {
-    document.body.innerHTML =
-      "<div style='opacity:.6;font-size:14px'>This space is private.</div>";
-    throw new Error("Access denied");
+    document.body.innerHTML = "<div style='opacity:.6'>This space is private.</div>";
+    throw new Error("blocked");
   }
 
-  const firebaseConfig = {
+  /* FIREBASE */
+  firebase.initializeApp({
     apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
     authDomain: "sunahh-43bb8.firebaseapp.com",
     databaseURL: "https://sunahh-43bb8-default-rtdb.firebaseio.com",
-    projectId: "sunahh-43bb8",
-    storageBucket: "sunahh-43bb8.appspot.com",
-    messagingSenderId: "1018778991584",
-    appId: "1:1018778991584:web:34d11d94c1175a5f1d4985"
-  };
+    projectId: "sunahh-43bb8"
+  });
 
-  firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
-
   const sessionId = "abhishek-sana";
   const myColor = uid === "abhishek"
     ? "hsl(210,70%,60%)"
@@ -164,86 +173,54 @@
   const noteText = document.getElementById("noteText");
 
   setInterval(() => {
-    userRef.update({ lastSeen: Date.now(), color: myColor });
-  }, 5000);
+    userRef.update({ pressed:false, color: myColor, lastSeen: Date.now() });
+  }, 6000);
 
   let pressTimer;
-
-  function startPress() {
-    pressTimer = setTimeout(() => {
-      userRef.update({ pressed: true });
-    }, 1500);
-  }
-
-  function endPress() {
+  thumb.addEventListener("touchstart", () => {
+    pressTimer = setTimeout(() => userRef.update({ pressed:true }), 1200);
+  });
+  thumb.addEventListener("touchend", () => {
     clearTimeout(pressTimer);
-    userRef.update({ pressed: false });
-  }
-
-  ["mousedown","touchstart"].forEach(e =>
-    thumb.addEventListener(e, startPress)
-  );
-  ["mouseup","mouseleave","touchend","touchcancel"].forEach(e =>
-    thumb.addEventListener(e, endPress)
-  );
+    userRef.update({ pressed:false });
+  });
 
   sessionRef.on("value", snap => {
-    const data = snap.val();
-    if (!data || !data.users) return;
+    const u = snap.val()?.users || {};
+    const me = u[uid];
+    const other = u[uid==="abhishek"?"sana":"abhishek"];
+    if (!me || !other) return;
 
-    const me = data.users[uid];
-    const otherId = uid === "abhishek" ? "sana" : "abhishek";
-    const other = data.users[otherId];
-
-    const iPress = me?.pressed;
-    const otherPress = other?.pressed;
-
-    if (!iPress && !otherPress) {
+    if (me.pressed && other.pressed) {
+      thumb.style.background = `linear-gradient(135deg, ${myColor}, ${other.color})`;
+      thumb.classList.add("sync");
+      status.textContent = "with you";
+    } else if (other.pressed) {
+      thumb.style.background = other.color;
+      thumb.classList.remove("sync");
+      status.textContent = "here";
+    } else if (me.pressed) {
+      thumb.style.background = myColor;
+      thumb.classList.remove("sync");
+      status.textContent = "";
+    } else {
       thumb.style.background = "#333";
       thumb.classList.remove("sync");
       status.textContent = "";
     }
-
-    if (!iPress && otherPress) {
-      thumb.style.background = other.color;
-      thumb.classList.remove("sync");
-      status.textContent = "here";
-    }
-
-    if (iPress && !otherPress) {
-      thumb.style.background = myColor;
-      thumb.classList.remove("sync");
-      status.textContent = "";
-    }
-
-    if (iPress && otherPress) {
-      thumb.style.background =
-        `linear-gradient(135deg, ${myColor}, ${other.color})`;
-      thumb.classList.add("sync");
-      status.textContent = "with you";
-    }
   });
 
+  /* NOTES — FIXED */
   function sendNote() {
     const text = noteInput.value.trim();
-    const mood = document.getElementById("mood").value;
     if (!text) return;
-
-    noteRef.set({
-      text,
-      mood,
-      from: uid,
-      id: Date.now()
-    });
-
+    noteRef.set({ text, mood: mood.value, from: uid, id: Date.now() });
     noteInput.value = "";
   }
 
-  const openedAt = Date.now();
-
-  noteRef.once("value").then(snap => {
+  noteRef.on("value", snap => {
     const note = snap.val();
-    if (!note || note.from === uid || note.id < openedAt) return;
+    if (!note || note.from === uid) return;
 
     popup.className = note.mood + " show";
     noteText.textContent = note.text;
