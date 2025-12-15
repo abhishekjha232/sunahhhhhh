@@ -1,171 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Touch</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <style>
-:root {
-  --bg1: #120f14;
-  --bg2: #1b1622;
-  --soft: rgba(255,255,255,0.08);
-  --text-soft: rgba(255,255,255,0.75);
-  --text-faint: rgba(255,255,255,0.5);
+:root{
+  --bg1:#120f14;
+  --bg2:#1b1622;
+  --accent:rgba(255,255,255,.12);
 }
 
-/* 🔒 GLOBAL iOS FIXES */
-* {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
-  user-select: none;
+/* MOODS */
+body[data-mood="love"]{
+  --bg1:#2a1420; --bg2:#120f14; --accent:rgba(255,160,190,.35);
+}
+body[data-mood="joy"]{
+  --bg1:#2a220f; --bg2:#18140c; --accent:rgba(255,210,140,.4);
+}
+body[data-mood="angry"]{
+  --bg1:#2a1010; --bg2:#160c0c; --accent:rgba(255,120,120,.35);
+}
+body[data-mood="missing"]{
+  --bg1:#0b1016; --bg2:#111824; --accent:rgba(140,170,220,.35);
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
+*{user-select:none;-webkit-tap-highlight-color:transparent}
+
+body{
+  margin:0;
+  min-height:100vh;
   background:
-    radial-gradient(70% 60% at 50% 15%, rgba(255,180,200,0.08), transparent 60%),
-    radial-gradient(40% 30% at 80% 80%, rgba(200,160,255,0.06), transparent 70%),
-    linear-gradient(180deg, var(--bg2), var(--bg1));
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
-               system-ui, sans-serif;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 18px;
-  box-sizing: border-box;
+    radial-gradient(60% 50% at 50% 15%,var(--accent),transparent 60%),
+    linear-gradient(180deg,var(--bg2),var(--bg1));
+  font-family:system-ui,-apple-system;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  transition:background 1.2s ease;
 }
 
-#thumb {
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at top left,
-      rgba(255,255,255,0.18),
-      rgba(255,255,255,0.03));
-  backdrop-filter: blur(8px);
+/* CIRCLE */
+#thumb{
+  width:260px;
+  height:260px;
+  border-radius:50%;
+  background:radial-gradient(circle at top left,
+    rgba(255,255,255,.18),
+    rgba(255,255,255,.03));
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.1),
-    0 20px 60px rgba(0,0,0,0.4);
-  transition: background 2s ease, transform 0.5s ease;
-  touch-action: manipulation;
-
-  /* 🔒 iOS long-press kill */
-  -webkit-touch-callout: none;
+    inset 0 0 0 1px rgba(255,255,255,.1),
+    0 0 40px var(--accent),
+    0 20px 60px rgba(0,0,0,.45);
+  transition:background .4s ease, transform .4s ease;
 }
 
-@keyframes breathe {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.03); }
-  100% { transform: scale(1); }
+#thumb.sync{animation:breathe 8s infinite;}
+@keyframes breathe{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.04)}
+  100%{transform:scale(1)}
 }
 
-#thumb.sync {
-  animation: breathe 9s infinite;
+/* missing = slower */
+body[data-mood="missing"] #thumb.sync{
+  animation-duration:14s;
 }
 
-#status {
-  margin-top: 22px;
-  font-size: 13.5px;
-  letter-spacing: 0.3px;
-  color: var(--text-soft);
-  min-height: 18px;
+#status{margin-top:18px;font-size:13px;opacity:.75}
+#lastSeen{margin-top:6px;font-size:12px;opacity:.5}
+
+/* HISTORY */
+#historyBtn{
+  margin-top:14px;
+  font-size:12px;
+  opacity:.45;
+  cursor:pointer;
 }
 
-#lastSeen {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-faint);
-  min-height: 16px;
+#historyPanel{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(6px);
+  display:none;
+  align-items:flex-end;
+}
+#historyPanel.show{display:flex;}
+
+#historyInner{
+  width:100%;
+  max-height:55%;
+  background:rgba(20,20,30,.95);
+  border-radius:22px 22px 0 0;
+  padding:20px;
+  overflow-y:auto;
+  font-size:14px;
 }
 
-/* NOTES */
-#noteBox {
-  width: 100%;
-  max-width: 420px;
-  margin-top: 38px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
+.msg{margin-bottom:14px;}
+.msg.you{opacity:.55;}
+.msg span{
+  display:block;
+  font-size:11px;
+  opacity:.4;
+  margin-top:4px;
 }
 
-#noteInput {
-  flex: 1;
-  padding: 14px 18px;
-  border-radius: 22px;
-  border: 1px solid var(--soft);
-  background: rgba(255,255,255,0.05);
-  color: white;
-  font-size: 14px;
-  outline: none;
-
-  /* allow typing */
-  -webkit-user-select: text;
-  user-select: text;
+/* INPUT */
+#noteBox{
+  width:100%;
+  max-width:420px;
+  margin-top:24px;
+  display:flex;
+  gap:10px;
 }
-
-#noteInput::placeholder {
-  color: var(--text-faint);
+#noteInput{
+  flex:1;
+  padding:14px 18px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:white;
+  outline:none;
+  user-select:text;
 }
-
-#noteInput:focus {
-  border-color: rgba(255,180,200,0.4);
+#noteBox button{
+  padding:12px 16px;
+  border-radius:20px;
+  border:none;
+  background:rgba(255,255,255,.12);
+  color:white;
 }
-
-#mood {
-  padding: 12px 14px;
-  border-radius: 20px;
-  border: 1px solid var(--soft);
-  background: rgba(255,255,255,0.05);
-  color: white;
-  font-size: 14px;
-}
-
-#noteBox button {
-  padding: 12px 16px;
-  border-radius: 20px;
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* POPUP */
-#notePopup {
-  position: fixed;
-  bottom: 110px;
-  left: 50%;
-  transform: translateX(-50%) translateY(14px);
-  max-width: 80%;
-  padding: 18px 22px;
-  border-radius: 26px;
-  background: rgba(255,180,200,0.18);
-  backdrop-filter: blur(14px);
-  color: white;
-  font-size: 15px;
-  text-align: center;
-  opacity: 0;
-  transition: opacity 0.45s ease, transform 0.45s ease;
-  pointer-events: none;
-}
-
-#notePopup.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.love { background: rgba(255,150,180,0.9); }
-.joy { background: rgba(255,215,160,0.95); color: #2b2b2b; }
-.angry { background: rgba(255,120,120,0.9); }
 </style>
 </head>
 
@@ -175,132 +147,176 @@ body {
 <div id="status"></div>
 <div id="lastSeen"></div>
 
+<div id="historyBtn">last messages</div>
+
 <div id="noteBox">
-  <input id="noteInput" placeholder="leave a thought…" />
-  <select id="mood">
-    <option value="love">❤️</option>
-    <option value="joy">😄</option>
-    <option value="angry">😡</option>
-  </select>
-  <button onclick="sendNote()">→</button>
+  <input id="noteInput" placeholder="leave a thought…">
+  <button id="sendBtn">→</button>
 </div>
 
-<div id="notePopup"><div id="noteText"></div></div>
+<div id="historyPanel">
+  <div id="historyInner"></div>
+</div>
 
 <script>
-/* LOGIC */
-
-const allowedUsers = ["abhishek","sana"];
-const uid = location.hash.replace("#","").toLowerCase();
-if (!allowedUsers.includes(uid)) {
-  document.body.innerHTML = "<div style='opacity:.6'>This space is private.</div>";
-  throw new Error("blocked");
+/* ---------- PRIVATE CODE ---------- */
+const SECRET = "sunahh";
+if(localStorage._sunahh !== SECRET){
+  const s = prompt("enter private code");
+  if(s !== SECRET){
+    document.body.innerHTML="private space";
+    throw "";
+  }
+  localStorage._sunahh = SECRET;
 }
 
-firebase.initializeApp({
-  apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
-  authDomain: "sunahh-43bb8.firebaseapp.com",
-  databaseURL: "https://sunahh-43bb8-default-rtdb.firebaseio.com",
-  projectId: "sunahh-43bb8"
-});
+/* ---------- ID ---------- */
+const rawHash = location.hash.replace("#","");
+const uid = rawHash.split("?")[0].toLowerCase();
+if(!["abhishek","sana"].includes(uid)){
+  document.body.innerHTML="private space";
+  throw "";
+}
 
+/* ---------- FIREBASE ---------- */
+firebase.initializeApp({
+  apiKey:"AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
+  databaseURL:"https://sunahh-43bb8-default-rtdb.firebaseio.com"
+});
 const db = firebase.database();
-const sessionId = "abhishek-sana";
+const session="abhishek-sana";
+const userRef=db.ref(`sessions/${session}/users/${uid}`);
+const sessionRef=db.ref(`sessions/${session}`);
+const msgRef=db.ref(`sessions/${session}/messages`);
+
 const myColor = uid==="abhishek"
   ? "hsl(210,65%,60%)"
   : "hsl(330,65%,65%)";
 
-const userRef = db.ref(`sessions/${sessionId}/users/${uid}`);
-const sessionRef = db.ref(`sessions/${sessionId}`);
-const noteRef = sessionRef.child("note");
+/* ---------- LAST SEEN ---------- */
+setInterval(()=>{
+  userRef.update({lastSeen:Date.now(), color:myColor});
+},5000);
 
-const thumb = document.getElementById("thumb");
-const status = document.getElementById("status");
-const lastSeenEl = document.getElementById("lastSeen");
-const popup = document.getElementById("notePopup");
-const noteText = document.getElementById("noteText");
+function timeAgo(ms){
+  const d=Date.now()-ms;
+  if(d<60000) return "just now";
+  const m=Math.floor(d/60000);
+  if(m<60) return m+" min ago";
+  return Math.floor(m/60)+" hr ago";
+}
 
-/* Presence */
-setInterval(() => {
-  userRef.update({ color: myColor, lastSeen: Date.now() });
-}, 5000);
+/* ---------- TOUCH + COLOR ---------- */
+const thumb=document.getElementById("thumb");
+let pressStart=0;
+let stats={short:0,long:0,total:0};
+let sessionStart=Date.now();
 
-/* 🔥 FAST TOUCH (700ms) + iOS preventDefault */
-let pressTimer;
+function setThumbColor(c){
+  thumb.style.background =
+    `linear-gradient(135deg,
+      rgba(255,255,255,.25),
+      rgba(255,255,255,.05)),
+     ${c}`;
+}
+
 function startPress(e){
   e.preventDefault();
-  pressTimer = setTimeout(() => userRef.update({ pressed:true }), 700);
+  pressStart=Date.now();
+  setThumbColor(myColor);
+  userRef.update({pressed:true});
 }
+
 function endPress(){
-  clearTimeout(pressTimer);
-  userRef.update({ pressed:false });
+  if(!pressStart) return;
+  const d=Date.now()-pressStart;
+  pressStart=0;
+  thumb.style.background="";
+  userRef.update({pressed:false});
+  stats.total+=d;
+  if(d>=5000) stats.long++;
+  else if(d<=1500) stats.short++;
 }
 
-thumb.addEventListener("touchstart", startPress, { passive:false });
-thumb.addEventListener("mousedown", startPress);
-thumb.addEventListener("touchend", endPress);
-thumb.addEventListener("mouseup", endPress);
-thumb.addEventListener("mouseleave", endPress);
+["mousedown","touchstart"].forEach(e=>thumb.addEventListener(e,startPress,{passive:false}));
+["mouseup","mouseleave","touchend"].forEach(e=>thumb.addEventListener(e,endPress));
 
-/* Time text */
-function timeAgo(ms){
-  if(!ms) return "";
-  const d = Date.now() - ms;
-  if(d < 60000) return "missed you · just now";
-  const m = Math.floor(d / 60000);
-  if(m < 60) return `missed you · ${m} min ago`;
-  const h = Math.floor(m / 60);
-  return `missed you · ${h} hour${h>1?"s":""} ago`;
+/* ---------- MOOD ---------- */
+function inferMood(){
+  const dur=Date.now()-sessionStart;
+  let mood="default";
+  if(stats.long>=2 && stats.total>=10000) mood="angry";
+  else if(stats.long>=1 && stats.total>=4000 && dur>=8000) mood="love";
+  else if(dur>=12000 && stats.long===0 && stats.total<=1500) mood="missing";
+  else if(stats.short>=2 && stats.long===0) mood="joy";
+  userRef.update({mood});
 }
+window.addEventListener("beforeunload",inferMood);
 
-/* Sync */
-sessionRef.on("value", snap => {
-  const u = snap.val()?.users || {};
-  const me = u[uid];
-  const other = u[uid==="abhishek"?"sana":"abhishek"];
-  if(!me) return;
+/* ---------- SYNC ---------- */
+sessionRef.on("value",snap=>{
+  const u=snap.val()?.users||{};
+  const me=u[uid];
+  const other=u[uid==="abhishek"?"sana":"abhishek"];
 
-  if(me.pressed && other?.pressed){
-    thumb.style.background = `linear-gradient(135deg, ${myColor}, ${other.color})`;
+  if(me?.pressed && other?.pressed){
     thumb.classList.add("sync");
-    status.textContent = "here, together";
-    lastSeenEl.textContent = "";
-  } else if(other?.pressed){
-    thumb.style.background = other.color;
-    thumb.classList.remove("sync");
-    status.textContent = "felt you";
-    lastSeenEl.textContent = "";
-  } else if(me.pressed){
-    thumb.style.background = myColor;
-    thumb.classList.remove("sync");
-    status.textContent = "";
-    lastSeenEl.textContent = "";
-  } else {
-    thumb.style.background = "";
-    thumb.classList.remove("sync");
-    status.textContent = "";
-    lastSeenEl.textContent = other ? timeAgo(other.lastSeen) : "";
+    thumb.style.background=`linear-gradient(135deg, ${myColor}, ${other.color})`;
   }
+  else if(other?.pressed){
+    thumb.classList.remove("sync");
+    setThumbColor(other.color);
+  }
+  else if(me?.pressed){
+    thumb.classList.remove("sync");
+    setThumbColor(myColor);
+  }
+  else{
+    thumb.classList.remove("sync");
+    thumb.style.background="";
+  }
+
+  if(other?.mood) document.body.dataset.mood=other.mood;
+  lastSeen.textContent = other?.lastSeen
+    ? "last seen · "+timeAgo(other.lastSeen)
+    : "";
 });
 
-/* Notes */
+/* ---------- CHAT ---------- */
 function sendNote(){
-  const t = noteInput.value.trim();
+  const t=noteInput.value.trim();
   if(!t) return;
-  noteRef.set({ text:t, mood:mood.value, from:uid, id:Date.now() });
-  noteInput.value = "";
+  msgRef.once("value",snap=>{
+    let arr=snap.val()||[];
+    arr.push({text:t,from:uid,time:Date.now()});
+    if(arr.length>5) arr=arr.slice(-5);
+    msgRef.set(arr);
+    noteInput.value="";
+  });
 }
 
-noteRef.on("value", snap => {
-  const n = snap.val();
-  if(!n || n.from === uid) return;
-  popup.className = n.mood + " show";
-  noteText.textContent = n.text;
-  setTimeout(() => {
-    popup.classList.remove("show");
-    noteRef.remove();
-  }, 4500);
+sendBtn.onclick=sendNote;
+noteInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter") sendNote();
 });
+
+msgRef.on("value",snap=>{
+  const arr=snap.val();
+  if(!arr) return;
+  historyInner.innerHTML="";
+  arr.forEach(m=>{
+    const div=document.createElement("div");
+    div.className="msg "+(m.from===uid?"you":"them");
+    div.innerHTML=`${m.text}<span>${m.from===uid?"you":"them"} · ${timeAgo(m.time)}</span>`;
+    historyInner.appendChild(div);
+  });
+});
+
+historyBtn.onclick=()=>historyPanel.classList.add("show");
+historyPanel.onclick=e=>{
+  if(e.target===historyPanel)
+    historyPanel.classList.remove("show");
+};
 </script>
 
 </body>
