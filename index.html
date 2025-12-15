@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Touch</title>
 
-<script src="https://www.gstatic.comirebasejs/8.10.0/firebase-app.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <style>
@@ -47,7 +48,8 @@ body {
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,0.1),
     0 20px 60px rgba(0,0,0,0.4);
-  transition: background 6s ease, transform 0.5s ease;
+  /* 🔥 FASTER BLEND */
+  transition: background 2s ease, transform 0.5s ease;
   touch-action: none;
 }
 
@@ -173,7 +175,7 @@ body {
 <div id="notePopup"><div id="noteText"></div></div>
 
 <script>
-/* LOGIC — UNCHANGED */
+/* LOGIC (unchanged) */
 
 const allowedUsers = ["abhishek","sana"];
 const uid = location.hash.replace("#","").toLowerCase();
@@ -209,9 +211,10 @@ setInterval(() => {
   userRef.update({ color: myColor, lastSeen: Date.now() });
 }, 5000);
 
+/* 🔥 FAST TOUCH (700ms) */
 let pressTimer;
 function startPress(){
-  pressTimer = setTimeout(() => userRef.update({ pressed:true }), 1200);
+  pressTimer = setTimeout(() => userRef.update({ pressed:true }), 700);
 }
 function endPress(){
   clearTimeout(pressTimer);
