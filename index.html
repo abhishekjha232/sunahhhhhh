@@ -16,18 +16,10 @@
 }
 
 /* MOODS */
-body[data-mood="love"]{
-  --bg1:#2a1420; --bg2:#120f14; --accent:rgba(255,160,190,.35);
-}
-body[data-mood="joy"]{
-  --bg1:#2a220f; --bg2:#18140c; --accent:rgba(255,210,140,.4);
-}
-body[data-mood="angry"]{
-  --bg1:#2a1010; --bg2:#160c0c; --accent:rgba(255,120,120,.35);
-}
-body[data-mood="missing"]{
-  --bg1:#0b1016; --bg2:#111824; --accent:rgba(140,170,220,.35);
-}
+body[data-mood="love"]{--bg1:#2a1420;--bg2:#120f14;--accent:rgba(255,160,190,.35);}
+body[data-mood="joy"]{--bg1:#2a220f;--bg2:#18140c;--accent:rgba(255,210,140,.4);}
+body[data-mood="angry"]{--bg1:#2a1010;--bg2:#160c0c;--accent:rgba(255,120,120,.35);}
+body[data-mood="missing"]{--bg1:#0b1016;--bg2:#111824;--accent:rgba(140,170,220,.35);}
 
 *{user-select:none;-webkit-tap-highlight-color:transparent}
 
@@ -48,9 +40,7 @@ body{
 
 /* CIRCLE */
 #thumb{
-  width:260px;
-  height:260px;
-  border-radius:50%;
+  width:260px;height:260px;border-radius:50%;
   background:radial-gradient(circle at top left,
     rgba(255,255,255,.18),
     rgba(255,255,255,.03));
@@ -67,74 +57,67 @@ body{
   50%{transform:scale(1.04)}
   100%{transform:scale(1)}
 }
-
-/* missing = slower */
-body[data-mood="missing"] #thumb.sync{
-  animation-duration:14s;
-}
+body[data-mood="missing"] #thumb.sync{animation-duration:14s;}
 
 #status{margin-top:18px;font-size:13px;opacity:.75}
 #lastSeen{margin-top:6px;font-size:12px;opacity:.5}
 
-/* HISTORY */
-#historyBtn{
-  margin-top:14px;
-  font-size:12px;
-  opacity:.45;
-  cursor:pointer;
+/* POPUP */
+#notePopup{
+  position:fixed;
+  bottom:110px;
+  left:50%;
+  transform:translateX(-50%) translateY(14px);
+  padding:18px 22px;
+  border-radius:26px;
+  background:rgba(255,255,255,.15);
+  backdrop-filter:blur(14px);
+  max-width:80%;
+  text-align:center;
+  font-size:15px;
+  opacity:0;
+  transition:.45s ease;
+}
+#notePopup.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
 }
 
+/* HISTORY */
+#historyBtn{margin-top:14px;font-size:12px;opacity:.45;cursor:pointer;}
 #historyPanel{
-  position:fixed;
-  inset:0;
+  position:fixed;inset:0;
   background:rgba(0,0,0,.55);
   backdrop-filter:blur(6px);
-  display:none;
-  align-items:flex-end;
+  display:none;align-items:flex-end;
 }
 #historyPanel.show{display:flex;}
-
 #historyInner{
-  width:100%;
-  max-height:55%;
+  width:100%;max-height:55%;
   background:rgba(20,20,30,.95);
   border-radius:22px 22px 0 0;
-  padding:20px;
-  overflow-y:auto;
-  font-size:14px;
+  padding:20px;overflow-y:auto;
 }
-
 .msg{margin-bottom:14px;}
 .msg.you{opacity:.55;}
-.msg span{
-  display:block;
-  font-size:11px;
-  opacity:.4;
-  margin-top:4px;
-}
+.msg span{font-size:11px;opacity:.4;display:block;margin-top:4px;}
 
 /* INPUT */
 #noteBox{
-  width:100%;
-  max-width:420px;
+  width:100%;max-width:420px;
   margin-top:24px;
-  display:flex;
-  gap:10px;
+  display:flex;gap:10px;
 }
 #noteInput{
-  flex:1;
-  padding:14px 18px;
+  flex:1;padding:14px 18px;
   border-radius:22px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
-  color:white;
-  outline:none;
-  user-select:text;
+  color:white;outline:none;
 }
 #noteBox button{
   padding:12px 16px;
-  border-radius:20px;
-  border:none;
+  border-radius:20px;border:none;
   background:rgba(255,255,255,.12);
   color:white;
 }
@@ -154,28 +137,39 @@ body[data-mood="missing"] #thumb.sync{
   <button id="sendBtn">→</button>
 </div>
 
+<div id="notePopup"></div>
+
 <div id="historyPanel">
   <div id="historyInner"></div>
 </div>
 
 <script>
 /* ---------- PRIVATE CODE ---------- */
-const SECRET = "sunahh";
-if(localStorage._sunahh !== SECRET){
-  const s = prompt("enter private code");
-  if(s !== SECRET){
-    document.body.innerHTML="private space";
-    throw "";
-  }
-  localStorage._sunahh = SECRET;
+const SECRET="sunahh";
+if(localStorage._sunahh!==SECRET){
+  const s=prompt("enter private code");
+  if(s!==SECRET){document.body.innerHTML="private space";throw"";}
+  localStorage._sunahh=SECRET;
 }
 
 /* ---------- ID ---------- */
-const rawHash = location.hash.replace("#","");
-const uid = rawHash.split("?")[0].toLowerCase();
+const uid=location.hash.replace("#","").split("?")[0].toLowerCase();
 if(!["abhishek","sana"].includes(uid)){
-  document.body.innerHTML="private space";
-  throw "";
+  document.body.innerHTML="private space";throw"";
+}
+
+/* ---------- RANDOM COLOR (STABLE) ---------- */
+function randomColor(){
+  const h=Math.floor(Math.random()*360);
+  const s=65+Math.random()*15;
+  const l=55+Math.random()*10;
+  return `hsl(${h},${s}%,${l}%)`;
+}
+
+let myColor = localStorage.getItem("myColor");
+if(!myColor){
+  myColor = randomColor();
+  localStorage.setItem("myColor", myColor);
 }
 
 /* ---------- FIREBASE ---------- */
@@ -183,21 +177,14 @@ firebase.initializeApp({
   apiKey:"AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
   databaseURL:"https://sunahh-43bb8-default-rtdb.firebaseio.com"
 });
-const db = firebase.database();
+const db=firebase.database();
 const session="abhishek-sana";
 const userRef=db.ref(`sessions/${session}/users/${uid}`);
 const sessionRef=db.ref(`sessions/${session}`);
 const msgRef=db.ref(`sessions/${session}/messages`);
 
-const myColor = uid==="abhishek"
-  ? "hsl(210,65%,60%)"
-  : "hsl(330,65%,65%)";
-
 /* ---------- LAST SEEN ---------- */
-setInterval(()=>{
-  userRef.update({lastSeen:Date.now(), color:myColor});
-},5000);
-
+setInterval(()=>userRef.update({lastSeen:Date.now(),color:myColor}),5000);
 function timeAgo(ms){
   const d=Date.now()-ms;
   if(d<60000) return "just now";
@@ -206,83 +193,46 @@ function timeAgo(ms){
   return Math.floor(m/60)+" hr ago";
 }
 
-/* ---------- TOUCH + COLOR ---------- */
+/* ---------- TOUCH COLOR ---------- */
 const thumb=document.getElementById("thumb");
-let pressStart=0;
-let stats={short:0,long:0,total:0};
-let sessionStart=Date.now();
+let pressing=false;
 
-function setThumbColor(c){
-  thumb.style.background =
-    `linear-gradient(135deg,
-      rgba(255,255,255,.25),
-      rgba(255,255,255,.05)),
-     ${c}`;
+function setThumb(c){
+  thumb.style.background=
+    `linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,.05)),${c}`;
 }
 
-function startPress(e){
+thumb.onmousedown=thumb.ontouchstart=e=>{
   e.preventDefault();
-  pressStart=Date.now();
-  setThumbColor(myColor);
+  pressing=true;
+  setThumb(myColor);
   userRef.update({pressed:true});
-}
+};
 
-function endPress(){
-  if(!pressStart) return;
-  const d=Date.now()-pressStart;
-  pressStart=0;
-  thumb.style.background="";
-  userRef.update({pressed:false});
-  stats.total+=d;
-  if(d>=5000) stats.long++;
-  else if(d<=1500) stats.short++;
-}
-
-["mousedown","touchstart"].forEach(e=>thumb.addEventListener(e,startPress,{passive:false}));
-["mouseup","mouseleave","touchend"].forEach(e=>thumb.addEventListener(e,endPress));
-
-/* ---------- MOOD ---------- */
-function inferMood(){
-  const dur=Date.now()-sessionStart;
-  let mood="default";
-  if(stats.long>=2 && stats.total>=10000) mood="angry";
-  else if(stats.long>=1 && stats.total>=4000 && dur>=8000) mood="love";
-  else if(dur>=12000 && stats.long===0 && stats.total<=1500) mood="missing";
-  else if(stats.short>=2 && stats.long===0) mood="joy";
-  userRef.update({mood});
-}
-window.addEventListener("beforeunload",inferMood);
+["mouseup","mouseleave","touchend"].forEach(e=>{
+  thumb.addEventListener(e,()=>{
+    if(!pressing) return;
+    pressing=false;
+    thumb.style.background="";
+    userRef.update({pressed:false});
+  });
+});
 
 /* ---------- SYNC ---------- */
 sessionRef.on("value",snap=>{
   const u=snap.val()?.users||{};
-  const me=u[uid];
   const other=u[uid==="abhishek"?"sana":"abhishek"];
 
-  if(me?.pressed && other?.pressed){
-    thumb.classList.add("sync");
-    thumb.style.background=`linear-gradient(135deg, ${myColor}, ${other.color})`;
-  }
-  else if(other?.pressed){
-    thumb.classList.remove("sync");
-    setThumbColor(other.color);
-  }
-  else if(me?.pressed){
-    thumb.classList.remove("sync");
-    setThumbColor(myColor);
-  }
-  else{
-    thumb.classList.remove("sync");
-    thumb.style.background="";
-  }
-
+  if(other?.pressed) setThumb(other.color);
   if(other?.mood) document.body.dataset.mood=other.mood;
-  lastSeen.textContent = other?.lastSeen
-    ? "last seen · "+timeAgo(other.lastSeen)
-    : "";
+  lastSeen.textContent=other?.lastSeen
+    ?"last seen · "+timeAgo(other.lastSeen)
+    :"";
 });
 
 /* ---------- CHAT ---------- */
+let lastPopupTime=0;
+
 function sendNote(){
   const t=noteInput.value.trim();
   if(!t) return;
@@ -294,28 +244,32 @@ function sendNote(){
     noteInput.value="";
   });
 }
-
 sendBtn.onclick=sendNote;
-noteInput.addEventListener("keydown",e=>{
-  if(e.key==="Enter") sendNote();
-});
+noteInput.onkeydown=e=>{if(e.key==="Enter") sendNote();};
 
 msgRef.on("value",snap=>{
-  const arr=snap.val();
-  if(!arr) return;
+  const arr=snap.val(); if(!arr) return;
   historyInner.innerHTML="";
   arr.forEach(m=>{
-    const div=document.createElement("div");
-    div.className="msg "+(m.from===uid?"you":"them");
-    div.innerHTML=`${m.text}<span>${m.from===uid?"you":"them"} · ${timeAgo(m.time)}</span>`;
-    historyInner.appendChild(div);
+    const d=document.createElement("div");
+    d.className="msg "+(m.from===uid?"you":"them");
+    d.innerHTML=`${m.text}<span>${timeAgo(m.time)}</span>`;
+    historyInner.appendChild(d);
   });
+
+  const last=arr[arr.length-1];
+  if(last.from!==uid && last.time!==lastPopupTime){
+    lastPopupTime=last.time;
+    notePopup.textContent=last.text;
+    notePopup.classList.add("show");
+    setTimeout(()=>notePopup.classList.remove("show"),4000);
+  }
 });
 
+/* ---------- HISTORY ---------- */
 historyBtn.onclick=()=>historyPanel.classList.add("show");
 historyPanel.onclick=e=>{
-  if(e.target===historyPanel)
-    historyPanel.classList.remove("show");
+  if(e.target===historyPanel) historyPanel.classList.remove("show");
 };
 </script>
 
