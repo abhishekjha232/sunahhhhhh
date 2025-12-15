@@ -45,11 +45,19 @@
   #status {
     margin-top: 18px;
     font-size: 15px;
-    opacity: 0.7;
+    opacity: 0.75;
     min-height: 20px;
+    text-align: center;
   }
 
-  /* NOTES */
+  #lastSeen {
+    margin-top: 6px;
+    font-size: 13px;
+    opacity: 0.5;
+    min-height: 16px;
+  }
+
+  /* MESSAGE INPUT */
   #noteBox {
     width: 100%;
     max-width: 420px;
@@ -114,11 +122,11 @@
   .angry { background: #ff4b3a; animation: shake 0.4s 1; }
 
   @keyframes shake {
-    0% { transform: translateX(-50%) translateY(0); }
-    25% { transform: translateX(-52%) translateY(0); }
-    50% { transform: translateX(-48%) translateY(0); }
-    75% { transform: translateX(-52%) translateY(0); }
-    100% { transform: translateX(-50%) translateY(0); }
+    0% { transform: translateX(-50%); }
+    25% { transform: translateX(-52%); }
+    50% { transform: translateX(-48%); }
+    75% { transform: translateX(-52%); }
+    100% { transform: translateX(-50%); }
   }
 </style>
 </head>
@@ -127,6 +135,7 @@
 
 <div id="thumb"></div>
 <div id="status"></div>
+<div id="lastSeen"></div>
 
 <div id="noteBox">
   <input id="noteInput" placeholder="leave a thought…" />
@@ -159,9 +168,11 @@
 
   const db = firebase.database();
   const sessionId = "abhishek-sana";
-  const myColor = uid === "abhishek"
-    ? "hsl(210,70%,60%)"
-    : "hsl(330,70%,65%)";
+
+  const myColor =
+    uid === "abhishek"
+      ? "hsl(210,70%,60%)"
+      : "hsl(330,70%,65%)";
 
   const userRef = db.ref(`sessions/${sessionId}/users/${uid}`);
   const sessionRef = db.ref(`sessions/${sessionId}`);
@@ -169,52 +180,97 @@
 
   const thumb = document.getElementById("thumb");
   const status = document.getElementById("status");
+  const lastSeenEl = document.getElementById("lastSeen");
   const popup = document.getElementById("notePopup");
   const noteText = document.getElementById("noteText");
 
+  /* HEARTBEAT (safe) */
   setInterval(() => {
-    userRef.update({ pressed:false, color: myColor, lastSeen: Date.now() });
-  }, 6000);
+    userRef.update({
+      color: myColor,
+      lastSeen: Date.now()
+    });
+  }, 5000);
 
+  /* PRESS & HOLD */
   let pressTimer;
-  thumb.addEventListener("touchstart", () => {
-    pressTimer = setTimeout(() => userRef.update({ pressed:true }), 1200);
-  });
-  thumb.addEventListener("touchend", () => {
+
+  function startPress() {
+    pressTimer = setTimeout(() => {
+      userRef.update({ pressed: true });
+    }, 1200);
+  }
+
+  function endPress() {
     clearTimeout(pressTimer);
-    userRef.update({ pressed:false });
-  });
+    userRef.update({ pressed: false });
+  }
 
+  thumb.addEventListener("touchstart", startPress);
+  thumb.addEventListener("mousedown", startPress);
+  thumb.addEventListener("touchend", endPress);
+  thumb.addEventListener("mouseup", endPress);
+  thumb.addEventListener("mouseleave", endPress);
+
+  /* HUMAN TIME */
+  function timeAgo(ms) {
+    if (!ms) return "";
+    const diff = Date.now() - ms;
+    if (diff < 60000) return "missed you · just now";
+    const min = Math.floor(diff / 60000);
+    if (min < 60) return `missed you · ${min} min ago`;
+    const hr = Math.floor(min / 60);
+    return `missed you · ${hr} hour${hr > 1 ? "s" : ""} ago`;
+  }
+
+  /* SYNC + LAST SEEN */
   sessionRef.on("value", snap => {
-    const u = snap.val()?.users || {};
-    const me = u[uid];
-    const other = u[uid==="abhishek"?"sana":"abhishek"];
-    if (!me || !other) return;
+    const users = snap.val()?.users || {};
+    const me = users[uid];
+    const otherId = uid === "abhishek" ? "sana" : "abhishek";
+    const other = users[otherId];
 
-    if (me.pressed && other.pressed) {
-      thumb.style.background = `linear-gradient(135deg, ${myColor}, ${other.color})`;
+    if (!me) return;
+
+    if (me.pressed && other?.pressed) {
+      thumb.style.background =
+        `linear-gradient(135deg, ${myColor}, ${other.color})`;
       thumb.classList.add("sync");
       status.textContent = "with you";
-    } else if (other.pressed) {
+      lastSeenEl.textContent = "";
+    }
+    else if (other?.pressed) {
       thumb.style.background = other.color;
       thumb.classList.remove("sync");
       status.textContent = "here";
-    } else if (me.pressed) {
+      lastSeenEl.textContent = "";
+    }
+    else if (me.pressed) {
       thumb.style.background = myColor;
       thumb.classList.remove("sync");
       status.textContent = "";
-    } else {
+      lastSeenEl.textContent = "";
+    }
+    else {
       thumb.style.background = "#333";
       thumb.classList.remove("sync");
       status.textContent = "";
+      lastSeenEl.textContent = other ? timeAgo(other.lastSeen) : "";
     }
   });
 
-  /* NOTES — FIXED */
+  /* NOTES */
   function sendNote() {
     const text = noteInput.value.trim();
     if (!text) return;
-    noteRef.set({ text, mood: mood.value, from: uid, id: Date.now() });
+
+    noteRef.set({
+      text,
+      mood: mood.value,
+      from: uid,
+      id: Date.now()
+    });
+
     noteInput.value = "";
   }
 
