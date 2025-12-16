@@ -40,7 +40,9 @@ body{
 
 /* CIRCLE */
 #thumb{
-  width:260px;height:260px;border-radius:50%;
+  width:260px;
+  height:260px;
+  border-radius:50%;
   background:radial-gradient(circle at top left,
     rgba(255,255,255,.18),
     rgba(255,255,255,.03));
@@ -48,16 +50,22 @@ body{
     inset 0 0 0 1px rgba(255,255,255,.1),
     0 0 40px var(--accent),
     0 20px 60px rgba(0,0,0,.45);
-  transition:background .4s ease, transform .4s ease;
+  transition:background .35s ease, transform .35s ease;
 }
 
-#thumb.sync{animation:breathe 8s infinite;}
+#thumb.sync{
+  animation:breathe 8s infinite;
+}
+
 @keyframes breathe{
   0%{transform:scale(1)}
   50%{transform:scale(1.04)}
   100%{transform:scale(1)}
 }
-body[data-mood="missing"] #thumb.sync{animation-duration:14s;}
+
+body[data-mood="missing"] #thumb.sync{
+  animation-duration:14s;
+}
 
 #status{margin-top:18px;font-size:13px;opacity:.75}
 #lastSeen{margin-top:6px;font-size:12px;opacity:.5}
@@ -165,11 +173,10 @@ function randomColor(){
   const l=55+Math.random()*10;
   return `hsl(${h},${s}%,${l}%)`;
 }
-
-let myColor = localStorage.getItem("myColor");
+let myColor=localStorage.getItem("myColor");
 if(!myColor){
-  myColor = randomColor();
-  localStorage.setItem("myColor", myColor);
+  myColor=randomColor();
+  localStorage.setItem("myColor",myColor);
 }
 
 /* ---------- FIREBASE ---------- */
@@ -193,41 +200,58 @@ function timeAgo(ms){
   return Math.floor(m/60)+" hr ago";
 }
 
-/* ---------- TOUCH COLOR ---------- */
+/* ---------- PRESS LOGIC ---------- */
 const thumb=document.getElementById("thumb");
-let pressing=false;
+let isPressing=false;
 
-function setThumb(c){
+function showColor(c){
   thumb.style.background=
-    `linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,.05)),${c}`;
+    `linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.05)), ${c}`;
 }
 
 thumb.onmousedown=thumb.ontouchstart=e=>{
   e.preventDefault();
-  pressing=true;
-  setThumb(myColor);
+  isPressing=true;
+  showColor(myColor);
   userRef.update({pressed:true});
 };
 
-["mouseup","mouseleave","touchend"].forEach(e=>{
-  thumb.addEventListener(e,()=>{
-    if(!pressing) return;
-    pressing=false;
+["mouseup","mouseleave","touchend"].forEach(ev=>{
+  thumb.addEventListener(ev,()=>{
+    if(!isPressing) return;
+    isPressing=false;
     thumb.style.background="";
     userRef.update({pressed:false});
   });
 });
 
-/* ---------- SYNC ---------- */
+/* ---------- SYNC (GRADIENT GUARANTEED) ---------- */
 sessionRef.on("value",snap=>{
   const u=snap.val()?.users||{};
+  const me=u[uid];
   const other=u[uid==="abhishek"?"sana":"abhishek"];
 
-  if(other?.pressed) setThumb(other.color);
+  if(me?.pressed && other?.pressed){
+    thumb.classList.add("sync");
+    thumb.style.background=`linear-gradient(135deg, ${me.color}, ${other.color})`;
+  }
+  else if(other?.pressed){
+    thumb.classList.remove("sync");
+    showColor(other.color);
+  }
+  else if(me?.pressed){
+    thumb.classList.remove("sync");
+    showColor(me.color);
+  }
+  else{
+    thumb.classList.remove("sync");
+    thumb.style.background="";
+  }
+
   if(other?.mood) document.body.dataset.mood=other.mood;
   lastSeen.textContent=other?.lastSeen
-    ?"last seen · "+timeAgo(other.lastSeen)
-    :"";
+    ? "last seen · "+timeAgo(other.lastSeen)
+    : "";
 });
 
 /* ---------- CHAT ---------- */
@@ -249,6 +273,7 @@ noteInput.onkeydown=e=>{if(e.key==="Enter") sendNote();};
 
 msgRef.on("value",snap=>{
   const arr=snap.val(); if(!arr) return;
+
   historyInner.innerHTML="";
   arr.forEach(m=>{
     const d=document.createElement("div");
