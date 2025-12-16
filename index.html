@@ -15,7 +15,7 @@
   --accent:rgba(255,255,255,.12);
 }
 
-/* MOODS */
+/* MOODS (unchanged) */
 body[data-mood="love"]{--bg1:#2a1420;--bg2:#120f14;--accent:rgba(255,160,190,.35);}
 body[data-mood="joy"]{--bg1:#2a220f;--bg2:#18140c;--accent:rgba(255,210,140,.4);}
 body[data-mood="angry"]{--bg1:#2a1010;--bg2:#160c0c;--accent:rgba(255,120,120,.35);}
@@ -53,19 +53,13 @@ body{
   transition:background .35s ease, transform .35s ease;
 }
 
-#thumb.sync{
-  animation:breathe 8s infinite;
-}
-
+#thumb.sync{animation:breathe 8s infinite;}
 @keyframes breathe{
   0%{transform:scale(1)}
   50%{transform:scale(1.04)}
   100%{transform:scale(1)}
 }
-
-body[data-mood="missing"] #thumb.sync{
-  animation-duration:14s;
-}
+body[data-mood="missing"] #thumb.sync{animation-duration:14s;}
 
 #status{margin-top:18px;font-size:13px;opacity:.75}
 #lastSeen{margin-top:6px;font-size:12px;opacity:.5}
@@ -166,18 +160,14 @@ if(!["abhishek","sana"].includes(uid)){
   document.body.innerHTML="private space";throw"";
 }
 
-/* ---------- RANDOM COLOR (STABLE) ---------- */
+/* ---------- RANDOM COLOR (EVERY LOAD) ---------- */
 function randomColor(){
   const h=Math.floor(Math.random()*360);
   const s=65+Math.random()*15;
   const l=55+Math.random()*10;
   return `hsl(${h},${s}%,${l}%)`;
 }
-let myColor=localStorage.getItem("myColor");
-if(!myColor){
-  myColor=randomColor();
-  localStorage.setItem("myColor",myColor);
-}
+const myColor=randomColor();
 
 /* ---------- FIREBASE ---------- */
 firebase.initializeApp({
@@ -200,32 +190,45 @@ function timeAgo(ms){
   return Math.floor(m/60)+" hr ago";
 }
 
-/* ---------- PRESS LOGIC ---------- */
+/* ---------- AESTHETIC COLOR FUNCTIONS ---------- */
 const thumb=document.getElementById("thumb");
-let isPressing=false;
 
-function showColor(c){
-  thumb.style.background=
-    `linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.05)), ${c}`;
+function showSolo(color){
+  thumb.style.background=`
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 55%),
+    radial-gradient(circle at center, ${color}, rgba(0,0,0,.25)),
+    radial-gradient(circle at bottom right, rgba(0,0,0,.35), transparent 60%)
+  `;
 }
+
+function showBlend(a,b){
+  thumb.style.background=`
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.45), transparent 50%),
+    linear-gradient(135deg, ${a}, ${b}),
+    radial-gradient(circle at center, rgba(0,0,0,.35), transparent 60%)
+  `;
+}
+
+/* ---------- PRESS ---------- */
+let pressing=false;
 
 thumb.onmousedown=thumb.ontouchstart=e=>{
   e.preventDefault();
-  isPressing=true;
-  showColor(myColor);
+  pressing=true;
+  showSolo(myColor);
   userRef.update({pressed:true});
 };
 
 ["mouseup","mouseleave","touchend"].forEach(ev=>{
   thumb.addEventListener(ev,()=>{
-    if(!isPressing) return;
-    isPressing=false;
+    if(!pressing) return;
+    pressing=false;
     thumb.style.background="";
     userRef.update({pressed:false});
   });
 });
 
-/* ---------- SYNC (GRADIENT GUARANTEED) ---------- */
+/* ---------- SYNC ---------- */
 sessionRef.on("value",snap=>{
   const u=snap.val()?.users||{};
   const me=u[uid];
@@ -233,15 +236,15 @@ sessionRef.on("value",snap=>{
 
   if(me?.pressed && other?.pressed){
     thumb.classList.add("sync");
-    thumb.style.background=`linear-gradient(135deg, ${me.color}, ${other.color})`;
+    showBlend(me.color, other.color);
   }
   else if(other?.pressed){
     thumb.classList.remove("sync");
-    showColor(other.color);
+    showSolo(other.color);
   }
   else if(me?.pressed){
     thumb.classList.remove("sync");
-    showColor(me.color);
+    showSolo(me.color);
   }
   else{
     thumb.classList.remove("sync");
@@ -250,8 +253,8 @@ sessionRef.on("value",snap=>{
 
   if(other?.mood) document.body.dataset.mood=other.mood;
   lastSeen.textContent=other?.lastSeen
-    ? "last seen · "+timeAgo(other.lastSeen)
-    : "";
+    ?"last seen · "+timeAgo(other.lastSeen)
+    :"";
 });
 
 /* ---------- CHAT ---------- */
