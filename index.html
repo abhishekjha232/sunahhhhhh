@@ -15,7 +15,7 @@
   --accent:rgba(255,255,255,.12);
 }
 
-/* MOODS (unchanged) */
+/* MOODS */
 body[data-mood="love"]{--bg1:#2a1420;--bg2:#120f14;--accent:rgba(255,160,190,.35);}
 body[data-mood="joy"]{--bg1:#2a220f;--bg2:#18140c;--accent:rgba(255,210,140,.4);}
 body[data-mood="angry"]{--bg1:#2a1010;--bg2:#160c0c;--accent:rgba(255,120,120,.35);}
@@ -53,26 +53,26 @@ body{
   transition:background .4s ease, transform .25s ease;
 }
 
-/* HEARTBEAT */
+/* smoother + faster heartbeat */
 #thumb.heartbeat{
-  animation:heartbeat 1.1s infinite;
+  animation:heartbeat 0.9s ease-in-out infinite;
 }
 @keyframes heartbeat{
   0%{transform:scale(1)}
-  14%{transform:scale(1.06)}
-  28%{transform:scale(1)}
-  42%{transform:scale(1.04)}
-  70%{transform:scale(1)}
+  18%{transform:scale(1.06)}
+  36%{transform:scale(1)}
+  55%{transform:scale(1.04)}
+  100%{transform:scale(1)}
 }
 
-/* DIFFUSING GRADIENT */
+/* diffusing particles feel */
 #thumb.diffuse{
-  animation:diffuse 6s linear infinite;
+  animation:diffuse 4.2s ease-in-out infinite;
 }
 @keyframes diffuse{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
+  0%{background-position:20% 30%, 80% 70%, center}
+  50%{background-position:80% 60%, 20% 40%, center}
+  100%{background-position:20% 30%, 80% 70%, center}
 }
 
 #status{margin-top:18px;font-size:13px;opacity:.75}
@@ -174,14 +174,14 @@ if(!["abhishek","sana"].includes(uid)){
   document.body.innerHTML="private space";throw"";
 }
 
-/* ---------- RANDOM COLOR (EVERY LOAD) ---------- */
-function randomColor(){
+/* ---------- PASTEL COLOR (ONCE PER SESSION) ---------- */
+function pastelColor(){
   const h=Math.floor(Math.random()*360);
-  const s=65+Math.random()*15;
-  const l=55+Math.random()*10;
+  const s=45+Math.random()*15;   // softer saturation
+  const l=70+Math.random()*8;    // pastel lightness
   return `hsl(${h},${s}%,${l}%)`;
 }
-const myColor=randomColor();
+const myColor=pastelColor();
 
 /* ---------- FIREBASE ---------- */
 firebase.initializeApp({
@@ -210,19 +210,20 @@ const thumb=document.getElementById("thumb");
 function showSolo(color){
   thumb.className="";
   thumb.style.background=`
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 55%),
-    radial-gradient(circle at center, ${color}, rgba(0,0,0,.25)),
-    radial-gradient(circle at bottom right, rgba(0,0,0,.35), transparent 60%)
+    radial-gradient(circle at 35% 35%, rgba(255,255,255,.45), transparent 55%),
+    radial-gradient(circle at center, ${color}, rgba(255,255,255,.25)),
+    radial-gradient(circle at 65% 65%, rgba(255,255,255,.2), transparent 60%)
   `;
 }
 
 function showBlend(a,b){
   thumb.className="heartbeat diffuse";
   thumb.style.background=`
-    linear-gradient(135deg, ${a}, ${b}, ${a}),
-    radial-gradient(circle at center, rgba(255,255,255,.25), transparent 60%)
+    radial-gradient(circle at 30% 30%, ${a}, transparent 55%),
+    radial-gradient(circle at 70% 70%, ${b}, transparent 55%),
+    radial-gradient(circle at center, rgba(255,255,255,.35), transparent 60%)
   `;
-  thumb.style.backgroundSize="400% 400%";
+  thumb.style.backgroundSize="160% 160%, 160% 160%, cover";
 }
 
 /* ---------- PRESS ---------- */
@@ -245,7 +246,7 @@ thumb.onmousedown=thumb.ontouchstart=e=>{
   });
 });
 
-/* ---------- SYNC + HEARTBEAT HAPTIC ---------- */
+/* ---------- SYNC + HAPTIC ---------- */
 let lastBeat=0;
 
 sessionRef.on("value",snap=>{
@@ -256,10 +257,9 @@ sessionRef.on("value",snap=>{
   if(me?.pressed && other?.pressed){
     showBlend(me.color, other.color);
 
-    // haptic heartbeat (mobile only)
     const now=Date.now();
-    if(navigator.vibrate && now-lastBeat>1000){
-      navigator.vibrate([30,60,30]);
+    if(navigator.vibrate && now-lastBeat>900){
+      navigator.vibrate([20,40,20]);
       lastBeat=now;
     }
   }
