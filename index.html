@@ -50,16 +50,30 @@ body{
     inset 0 0 0 1px rgba(255,255,255,.1),
     0 0 40px var(--accent),
     0 20px 60px rgba(0,0,0,.45);
-  transition:background .35s ease, transform .35s ease;
+  transition:background .4s ease, transform .25s ease;
 }
 
-#thumb.sync{animation:breathe 8s infinite;}
-@keyframes breathe{
-  0%{transform:scale(1)}
-  50%{transform:scale(1.04)}
-  100%{transform:scale(1)}
+/* HEARTBEAT */
+#thumb.heartbeat{
+  animation:heartbeat 1.1s infinite;
 }
-body[data-mood="missing"] #thumb.sync{animation-duration:14s;}
+@keyframes heartbeat{
+  0%{transform:scale(1)}
+  14%{transform:scale(1.06)}
+  28%{transform:scale(1)}
+  42%{transform:scale(1.04)}
+  70%{transform:scale(1)}
+}
+
+/* DIFFUSING GRADIENT */
+#thumb.diffuse{
+  animation:diffuse 6s linear infinite;
+}
+@keyframes diffuse{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
 
 #status{margin-top:18px;font-size:13px;opacity:.75}
 #lastSeen{margin-top:6px;font-size:12px;opacity:.5}
@@ -190,10 +204,11 @@ function timeAgo(ms){
   return Math.floor(m/60)+" hr ago";
 }
 
-/* ---------- AESTHETIC COLOR FUNCTIONS ---------- */
+/* ---------- VISUAL HELPERS ---------- */
 const thumb=document.getElementById("thumb");
 
 function showSolo(color){
+  thumb.className="";
   thumb.style.background=`
     radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 55%),
     radial-gradient(circle at center, ${color}, rgba(0,0,0,.25)),
@@ -202,11 +217,12 @@ function showSolo(color){
 }
 
 function showBlend(a,b){
+  thumb.className="heartbeat diffuse";
   thumb.style.background=`
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,.45), transparent 50%),
-    linear-gradient(135deg, ${a}, ${b}),
-    radial-gradient(circle at center, rgba(0,0,0,.35), transparent 60%)
+    linear-gradient(135deg, ${a}, ${b}, ${a}),
+    radial-gradient(circle at center, rgba(255,255,255,.25), transparent 60%)
   `;
+  thumb.style.backgroundSize="400% 400%";
 }
 
 /* ---------- PRESS ---------- */
@@ -223,31 +239,38 @@ thumb.onmousedown=thumb.ontouchstart=e=>{
   thumb.addEventListener(ev,()=>{
     if(!pressing) return;
     pressing=false;
+    thumb.className="";
     thumb.style.background="";
     userRef.update({pressed:false});
   });
 });
 
-/* ---------- SYNC ---------- */
+/* ---------- SYNC + HEARTBEAT HAPTIC ---------- */
+let lastBeat=0;
+
 sessionRef.on("value",snap=>{
   const u=snap.val()?.users||{};
   const me=u[uid];
   const other=u[uid==="abhishek"?"sana":"abhishek"];
 
   if(me?.pressed && other?.pressed){
-    thumb.classList.add("sync");
     showBlend(me.color, other.color);
+
+    // haptic heartbeat (mobile only)
+    const now=Date.now();
+    if(navigator.vibrate && now-lastBeat>1000){
+      navigator.vibrate([30,60,30]);
+      lastBeat=now;
+    }
   }
   else if(other?.pressed){
-    thumb.classList.remove("sync");
     showSolo(other.color);
   }
   else if(me?.pressed){
-    thumb.classList.remove("sync");
     showSolo(me.color);
   }
   else{
-    thumb.classList.remove("sync");
+    thumb.className="";
     thumb.style.background="";
   }
 
