@@ -41,13 +41,21 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Pulse Animation */
-        @keyframes heartPulse {
-            0% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.08); filter: brightness(1.2); }
-            100% { transform: scale(1); filter: brightness(1); }
+        /* Heart & Ripple Animations */
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.15); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.15); }
+            60% { transform: scale(1); }
         }
-        .animate-heart { animation: heartPulse 0.8s ease-in-out infinite; }
+        .animate-heart-beat { animation: heartBeat 2s infinite ease-in-out; }
+
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+        .animate-ripple { animation: ripple 1.5s infinite ease-out; }
 
         /* Typing Dots */
         .typing-dot {
@@ -74,6 +82,18 @@
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(30px);
             border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Sunrise Gradient Animation */
+        .bg-sunrise {
+            background: linear-gradient(135deg, #f43f5e, #fb923c, #fcd34d);
+            background-size: 200% 200%;
+            animation: gradientMove 5s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
     </style>
 </head>
@@ -196,6 +216,8 @@
             const [isPlayingAudio, setIsPlayingAudio] = useState(null);
             const [showInstallTip, setShowInstallTip] = useState(false);
             const [currentTime, setCurrentTime] = useState(new Date());
+            const messagesEndRef = useRef(null);
+            const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
             // Real-time Identity
             const [myId, setMyId] = useState(() => {
@@ -205,6 +227,15 @@
 
             const partnerId = myId === 'abhishek' ? 'sana' : 'abhishek';
 
+            // Auto-scroll logic
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages, view]);
+
             // Identity Listener
             useEffect(() => {
                 const handleHashChange = () => {
@@ -212,7 +243,13 @@
                     setMyId(hash === 'abhishek' ? 'abhishek' : 'sana');
                 };
                 window.addEventListener('hashchange', handleHashChange);
-                return () => window.removeEventListener('hashchange', handleHashChange);
+                window.addEventListener('online', () => setIsOffline(false));
+                window.addEventListener('offline', () => setIsOffline(true));
+                return () => {
+                    window.removeEventListener('hashchange', handleHashChange);
+                    window.removeEventListener('online', () => setIsOffline(false));
+                    window.removeEventListener('offline', () => setIsOffline(true));
+                }
             }, []);
 
             // Time updater
@@ -261,20 +298,20 @@
 
                 const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), (d) => {
                     if (d.exists()) setPartner(d.data());
-                });
+                }, (error) => console.log("Status sync issue", error));
 
                 const qMsg = query(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), orderBy('timestamp', 'desc'));
                 const unsubMsgs = onSnapshot(qMsg, (snap) => {
                     setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse());
-                });
+                }, (error) => console.log("Chat sync issue", error));
 
                 const qDreams = query(collection(db, 'artifacts', appId, 'public', 'data', 'dreams'), orderBy('timestamp', 'desc'));
-                const unsubDreams = onSnapshot(qDreams, (snap) => setDreams(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubDreams = onSnapshot(qDreams, (snap) => setDreams(snap.docs.map(d => ({ id: d.id, ...d.data() }))), (error) => console.log("Dreams sync issue", error));
 
                 return () => { unsubPartner(); unsubMsgs(); unsubDreams(); };
             }, [user, partnerId]);
 
-            // --- WRITER & VIBRATION LOGIC ---
+            // --- WRITER ---
             useEffect(() => {
                 if (!user || !window.fb) return;
                 const { doc, setDoc, serverTimestamp, getFirestore } = window.fb;
@@ -293,15 +330,6 @@
                         isTyping: typing 
                     }, { merge: true });
                 }, 2000); 
-
-                // Haptic Feedback Logic
-                if (isPressing && partner?.isPressing) {
-                     // BOTH pressing: Strong interaction
-                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                } else if (isPressing || partner?.isPressing) {
-                     // ONE pressing: Gentle
-                     if (navigator.vibrate) navigator.vibrate([20]);
-                }
 
                 return () => clearInterval(interval);
             }, [user, isPressing, myMood, myId, inputMsg, partner?.isPressing]);
@@ -384,7 +412,7 @@
 
             // --- HELPERS ---
             const getOnlineStatus = () => {
-                if (!partner?.lastSeen) return { text: "Offline", isOnline: false };
+                if (!partner?.lastSeen) return { text: "Waiting...", isOnline: false };
                 
                 const lastSeenMillis = partner.lastSeen.toMillis ? partner.lastSeen.toMillis() : 
                                      (partner.lastSeen.seconds ? partner.lastSeen.seconds * 1000 : Date.now());
@@ -392,7 +420,7 @@
                 const diff = Date.now() - lastSeenMillis;
                 const mins = Math.floor(diff / 60000);
                 
-                if (diff < 65000) return { text: "Online Now", isOnline: true };
+                if (diff < 90000) return { text: "Online Now", isOnline: true }; // 1.5 min threshold
                 if (mins < 60) return { text: `Seen ${mins}m ago`, isOnline: false };
                 return { text: `Seen ${Math.floor(mins/60)}h ago`, isOnline: false };
             };
@@ -411,6 +439,7 @@
             // Interaction States
             const bothPressing = isPressing && partner?.isPressing;
             const onePressing = (isPressing || partner?.isPressing) && !bothPressing;
+            const partnerPressing = partner?.isPressing;
 
             if (loading) {
                 return (
@@ -425,17 +454,17 @@
             }
 
             return (
-                <div className={`h-screen flex flex-col relative transition-colors duration-1000 ${currentMoodData?.bg || 'bg-slate-950'} text-white`}>
+                <div className={`h-screen flex flex-col relative transition-all duration-1000 ${bothPressing ? 'bg-sunrise' : (currentMoodData?.bg || 'bg-slate-950')} text-white`}>
                     
-                    {/* Background Ambient Glow */}
-                    <div className="fixed inset-0 pointer-events-none opacity-40 transition-opacity duration-1000">
+                    {/* Background Ambient Glow (Hidden during connection) */}
+                    <div className={`fixed inset-0 pointer-events-none transition-opacity duration-1000 ${bothPressing ? 'opacity-0' : 'opacity-40'}`}>
                         <div className={`absolute top-[-10%] left-[-10%] w-[70%] h-[70%] blur-[120px] rounded-full bg-gradient-to-br ${currentMoodData?.color || 'from-blue-500 to-purple-500'}`} />
                         <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] blur-[120px] rounded-full bg-gradient-to-tl from-pink-500 to-rose-500" />
                     </div>
 
                     <header className="relative z-10 px-6 pt-12 pb-2 flex justify-between items-center shrink-0">
                         <div>
-                            <h1 className="text-3xl font-serif font-medium bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70 capitalize">
+                            <h1 className="text-3xl font-serif font-medium bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70 capitalize drop-shadow-sm">
                                 {partnerId}
                             </h1>
                             <div className="flex items-center gap-2 mt-1">
@@ -451,33 +480,40 @@
                     </header>
 
                     <main className="flex-1 relative z-10 overflow-y-auto pb-32 px-6 no-scrollbar">
+                        {isOffline && (
+                            <div className="bg-red-500/20 border border-red-500/20 p-2 rounded-xl text-center text-xs text-red-200 mb-4 animate-pulse">
+                                Poor connection... trying to reconnect.
+                            </div>
+                        )}
+                        
                         {view === 'home' && (
                             <div className="h-full flex flex-col items-center justify-center gap-12 view-transition">
-                                {showInstallTip && (
-                                    <div className="glass-high p-4 rounded-2xl flex items-center gap-4 text-xs animate-pulse">
-                                        <Icon name="Smartphone" className="text-amber-300 shrink-0" size={20} />
-                                        <p>Tap Share → <strong>Add to Home Screen</strong> for the full experience.</p>
-                                    </div>
-                                )}
                                 
                                 <div className="text-center space-y-1">
-                                    <p className="text-sm font-serif italic text-white/50">{getGreeting()}</p>
-                                    <p className="text-xs text-white/30 uppercase tracking-widest">{status.isOnline ? "She is here with you" : "She is thinking of you"}</p>
+                                    <p className="text-sm font-serif italic text-white/60">{getGreeting()}</p>
+                                    <p className="text-xs text-white/40 uppercase tracking-widest">{status.isOnline ? "You are together" : "Waiting for her..."}</p>
                                 </div>
 
                                 {/* THE INTERACTIVE HEART */}
                                 <div className="relative group cursor-pointer select-none">
-                                    {/* BOTH PRESSING EFFECTS */}
+                                    {/* VISUAL EFFECTS */}
+                                    
+                                    {/* 1. Both Connected (Sunrise/Bloom) */}
                                     {bothPressing && (
                                         <>
-                                            <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/30 scale-150 duration-700" />
-                                            <div className="absolute inset-0 animate-pulse rounded-full border-4 border-amber-300 scale-110 duration-100" />
+                                            <div className="absolute inset-0 rounded-full bg-amber-100/30 animate-ripple" />
+                                            <div className="absolute inset-0 rounded-full bg-white/40 blur-xl animate-pulse" />
                                         </>
                                     )}
 
-                                    {/* SINGLE PRESSING EFFECTS */}
-                                    {onePressing && (
-                                        <div className="absolute inset-0 animate-ping rounded-full bg-rose-500/20 scale-150 duration-1000" />
+                                    {/* 2. Partner Pressing (Incoming Ripple) */}
+                                    {partnerPressing && !bothPressing && (
+                                         <div className="absolute inset-0 animate-ping rounded-full bg-rose-500/30 scale-150 duration-[2000ms]" />
+                                    )}
+
+                                    {/* 3. Me Pressing (Outgoing Ripple) */}
+                                    {isPressing && !bothPressing && (
+                                         <div className="absolute inset-0 animate-ping rounded-full bg-white/10 scale-125 duration-1000" />
                                     )}
                                     
                                     <button
@@ -485,30 +521,34 @@
                                         onMouseUp={() => setIsPressing(false)}
                                         onTouchStart={() => setIsPressing(true)}
                                         onTouchEnd={() => setIsPressing(false)}
-                                        className={`relative w-64 h-64 rounded-full glass-high flex items-center justify-center transition-all duration-300 
-                                        ${bothPressing ? 'scale-110 shadow-[0_0_80px_rgba(251,191,36,0.6)] border-2 border-amber-200/50' : ''}
-                                        ${onePressing ? 'animate-heart shadow-[0_0_50px_rgba(251,113,133,0.3)]' : 'shadow-2xl'}`}
+                                        className={`relative w-64 h-64 rounded-full glass-high flex items-center justify-center transition-all duration-700 
+                                        ${bothPressing ? 'scale-110 shadow-[0_0_100px_rgba(255,255,255,0.6)] border-4 border-white' : ''}
+                                        ${onePressing ? 'scale-95' : 'shadow-2xl'}`}
                                     >
                                         {bothPressing ? (
-                                             <Icon name="Zap" size={100} className="text-amber-300 animate-[spin_3s_linear_infinite] drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]" fill="currentColor" />
+                                             <Icon name="Heart" size={100} className="text-white animate-heart-beat drop-shadow-2xl" fill="currentColor" />
                                         ) : (
-                                             <Icon name="Heart" size={90} fill={(isPressing || partner?.isPressing) ? 'currentColor' : 'none'} className={`transition-colors duration-500 ${isPressing || partner?.isPressing ? 'text-rose-400' : 'text-white/10'}`} />
+                                             <Icon name="Heart" size={90} fill={(isPressing || partnerPressing) ? 'currentColor' : 'none'} className={`transition-colors duration-500 ${isPressing || partnerPressing ? 'text-rose-400' : 'text-white/10'}`} />
                                         )}
                                         
                                         {/* Floating Mood Icon */}
-                                        <div className="absolute -top-2 -right-2 w-12 h-12 glass rounded-full flex items-center justify-center text-2xl animate-bounce">
-                                            {partner?.mood ? MOODS.find(m => m.id === partner.mood)?.icon : '❤️'}
-                                        </div>
+                                        {!bothPressing && (
+                                            <div className="absolute -top-2 -right-2 w-12 h-12 glass rounded-full flex items-center justify-center text-2xl animate-bounce">
+                                                {partner?.mood ? MOODS.find(m => m.id === partner.mood)?.icon : '❤️'}
+                                            </div>
+                                        )}
                                     </button>
 
                                     {/* Dynamic Status Text */}
                                     <div className="absolute -bottom-16 left-0 right-0 text-center transition-all duration-300 h-8">
                                          {bothPressing ? (
-                                             <p className="text-amber-300 font-bold tracking-widest text-lg animate-pulse drop-shadow-lg">⚡ CONNECTED! ⚡</p>
-                                         ) : onePressing ? (
-                                             <p className="text-rose-300/80 font-medium tracking-wide text-sm animate-pulse">
-                                                {isPressing ? "Sending your touch..." : "Feeling her touch..."}
+                                             <p className="text-white font-serif font-bold tracking-widest text-xl animate-pulse drop-shadow-md">Two Hearts, One Rhythm</p>
+                                         ) : partnerPressing ? (
+                                             <p className="text-rose-300 font-medium tracking-wide text-sm animate-pulse">
+                                                Her heart is beating... touch to connect
                                              </p>
+                                         ) : isPressing ? (
+                                             <p className="text-white/50 text-xs tracking-widest uppercase">Reaching out...</p>
                                          ) : null}
                                     </div>
                                 </div>
@@ -534,7 +574,7 @@
 
                         {view === 'chat' && (
                             <div className="flex flex-col h-full pt-4 view-transition relative">
-                                <div className="flex-1 space-y-4 mb-20 overflow-y-auto no-scrollbar">
+                                <div className="flex-1 space-y-4 mb-20 overflow-y-auto no-scrollbar pb-4">
                                     {messages.map(m => (
                                         <div key={m.id} className={`flex flex-col ${m.sender === myId ? 'items-end' : 'items-start'}`}>
                                             <div className={`relative px-5 py-3.5 max-w-[85%] rounded-3xl text-[15px] leading-relaxed shadow-sm transition-all hover:scale-[1.01] ${
@@ -555,14 +595,14 @@
                                     
                                     {/* Typing Indicator */}
                                     {partner?.isTyping && (
-                                        <div className="flex items-center gap-1 px-4 py-2 glass rounded-2xl w-fit animate-pulse">
+                                        <div className="flex items-center gap-1 px-4 py-2 glass rounded-2xl w-fit animate-pulse mb-4">
                                             <span className="text-[10px] text-white/50 mr-2 uppercase tracking-wide">Sana is typing</span>
                                             <div className="typing-dot bg-white/50"></div>
                                             <div className="typing-dot bg-white/50"></div>
                                             <div className="typing-dot bg-white/50"></div>
                                         </div>
                                     )}
-                                    <div className="h-4"></div>
+                                    <div ref={messagesEndRef} />
                                 </div>
 
                                 <div className="fixed bottom-24 left-6 right-6 z-20">
