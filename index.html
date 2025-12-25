@@ -222,7 +222,6 @@
             useEffect(() => {
                 if (appState !== 'ready') return;
                 const { getAuth, onAuthStateChanged } = window.fb;
-                // Only use listener if we successfully initialized auth
                 try {
                     const unsub = onAuthStateChanged(getAuth(), (u) => { if(u) setUser(u); });
                     return () => unsub();
@@ -287,11 +286,6 @@
                 await addDoc(collection(getFirestore(), 'artifacts', appId, 'public', 'data', 'messages'), {
                     text, sender: myId, timestamp: serverTimestamp()
                 }).catch(err => console.error(err));
-            };
-
-            const handleGenerateDream = async (prompt) => {
-               // Placeholder for AI
-               alert("Visualizing requires backend.");
             };
 
             // --- RENDER ---
@@ -388,15 +382,15 @@
                             </div>
                         )}
 
-                        {/* DREAMS */}
+                        {/* DREAMS (Gallery Only) */}
                         {view === 'dreams' && (
                             <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar view-transition">
-                                <div className="glass p-6 rounded-3xl text-center space-y-4">
-                                    <Icon name="Sparkles" size={32} className="text-amber-300 mx-auto" />
-                                    <h2 className="font-serif text-lg font-bold">Dream Together</h2>
-                                    <textarea value={inputMsg} onChange={e=>setInputMsg(e.target.value)} placeholder="Describe a moment..." className="w-full bg-black/20 rounded-xl p-3 text-sm h-20 outline-none resize-none border border-white/10 focus:border-rose-500/50 transition-all"/>
-                                    <button onClick={()=>handleGenerateDream(inputMsg)} className="w-full py-3 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-rose-50 transition-colors">Visualize</button>
-                                </div>
+                                {dreams.length === 0 && (
+                                    <div className="text-center text-white/40 mt-12 flex flex-col items-center gap-4">
+                                        <Icon name="Cloud" size={48} />
+                                        <p>Shared Dream Gallery</p>
+                                    </div>
+                                )}
                                 {dreams.map(d => (
                                     <div key={d.id} className="glass rounded-3xl overflow-hidden shadow-2xl relative group">
                                         <img src={d.imageUrl} className="w-full aspect-[4/5] object-cover" />
