@@ -36,17 +36,17 @@
 
         /* Smooth Transitions */
         .view-transition {
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.4s ease-out;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         /* Pulse Animation */
         @keyframes heartPulse {
             0% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.1); filter: brightness(1.3); }
+            50% { transform: scale(1.08); filter: brightness(1.2); }
             100% { transform: scale(1); filter: brightness(1); }
         }
         .animate-heart {
@@ -101,18 +101,18 @@
                 Heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
                 MessageCircle: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
                 Cloud: <path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.812-2.112-5.132-4.832-5.447C17.712 5.093 15.088 3 12 3c-2.73 0-5.074 1.637-6.095 4.02C3.393 7.545 1.5 9.551 1.5 12c0 2.761 2.239 5 5 5h11Z" />,
-                Send: <><path d="m22 2-7 20-4-9-9-4Z" /><line x1="22" x2="11" y1="2" y2="13" /></>,
-                Sparkles: <><path d="m12 3 1.912 5.813a2 2 0 0 1 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 1-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 1-1.275-1.275L3 12l5.813-1.912a2 2 0 0 1 1.275-1.275L12 3Z" /></>,
-                MapPin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
-                Clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
-                Smile: <><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></>,
+                Send: <React.Fragment><path d="m22 2-7 20-4-9-9-4Z" /><line x1="22" x2="11" y1="2" y2="13" /></React.Fragment>,
+                Sparkles: <React.Fragment><path d="m12 3 1.912 5.813a2 2 0 0 1 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 1-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 1-1.275-1.275L3 12l5.813-1.912a2 2 0 0 1 1.275-1.275L12 3Z" /></React.Fragment>,
+                MapPin: <React.Fragment><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></React.Fragment>,
+                Clock: <React.Fragment><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></React.Fragment>,
+                Smile: <React.Fragment><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></React.Fragment>,
                 Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
-                Volume2: <><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></>,
-                Wand2: <><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.21 1.21 0 0 0 1.72 0L21.64 5.36a1.21 1.21 0 0 0 0-1.72Z" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /><path d="M11 3H9" /></>,
-                CalendarHeart: <><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h7" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /><path d="M21.2 13.1a2.4 2.4 0 0 0-3.4 0l-.8.8-.8-.8a2.4 2.4 0 0 0-3.4 3.4l4.2 4.2 4.2-4.2a2.4 2.4 0 0 0 0-3.4Z" /></>,
-                Smartphone: <><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><line x1="12" x2="12" y1="18" y2="18" /></>,
+                Volume2: <React.Fragment><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></React.Fragment>,
+                Wand2: <React.Fragment><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.21 1.21 0 0 0 1.72 0L21.64 5.36a1.21 1.21 0 0 0 0-1.72Z" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /><path d="M11 3H9" /></React.Fragment>,
+                CalendarHeart: <React.Fragment><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h7" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /><path d="M21.2 13.1a2.4 2.4 0 0 0-3.4 0l-.8.8-.8-.8a2.4 2.4 0 0 0-3.4 3.4l4.2 4.2 4.2-4.2a2.4 2.4 0 0 0 0-3.4Z" /></React.Fragment>,
+                Smartphone: <React.Fragment><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><line x1="12" x2="12" y1="18" y2="18" /></React.Fragment>,
                 Loader2: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
-                Settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" /></>
+                Settings: <React.Fragment><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" /></React.Fragment>
             };
 
             return (
@@ -198,11 +198,22 @@
             const [myMood, setMyMood] = useState('love');
             const [isPlayingAudio, setIsPlayingAudio] = useState(null);
             const [showInstallTip, setShowInstallTip] = useState(false);
-
-            const myId = useMemo(() => {
+            
+            // Real-time Identity Detection
+            const [myId, setMyId] = useState(() => {
                 const hash = window.location.hash.replace('#', '').toLowerCase();
                 return hash === 'abhishek' ? 'abhishek' : 'sana';
+            });
+
+            useEffect(() => {
+                const handleHashChange = () => {
+                    const hash = window.location.hash.replace('#', '').toLowerCase();
+                    setMyId(hash === 'abhishek' ? 'abhishek' : 'sana');
+                };
+                window.addEventListener('hashchange', handleHashChange);
+                return () => window.removeEventListener('hashchange', handleHashChange);
             }, []);
+
             const partnerId = myId === 'abhishek' ? 'sana' : 'abhishek';
 
             // --- INIT FIREBASE ---
@@ -215,7 +226,7 @@
                 }, 100);
 
                 const startApp = async () => {
-                    const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore } = window.fb;
+                    const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } = window.fb;
                     try {
                         const app = initializeApp(firebaseConfig);
                         const auth = getAuth(app);
@@ -245,22 +256,30 @@
                 const { doc, setDoc, onSnapshot, collection, query, orderBy, serverTimestamp, getFirestore } = window.fb;
                 const db = getFirestore();
 
-                const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), (d) => setPartner(d.data()));
+                // Partner Presence Listener
+                const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), (d) => {
+                    if (d.exists()) setPartner(d.data());
+                });
                 
+                // Messages Listener
                 const qMsg = query(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), orderBy('timestamp', 'desc'));
                 const unsubMsgs = onSnapshot(qMsg, (snap) => setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse()));
 
+                // Dreams Listener
                 const qDreams = query(collection(db, 'artifacts', appId, 'public', 'data', 'dreams'), orderBy('timestamp', 'desc'));
                 const unsubDreams = onSnapshot(qDreams, (snap) => setDreams(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
+                // Self Presence Heartbeat
                 const interval = setInterval(() => {
                     setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', myId), {
                         uid: user.uid, lastSeen: serverTimestamp(), isPressing, mood: myMood, id: myId
                     }, { merge: true });
-                }, 5000);
+                }, 3000); // Faster heartbeat for real-time feel
 
-                return () => { unsubPartner(); unsubMsgs(); unsubDreams(); clearInterval(interval); };
-            }, [user, isPressing, myMood]);
+                return () => { 
+                    unsubPartner(); unsubMsgs(); unsubDreams(); clearInterval(interval); 
+                };
+            }, [user, isPressing, myMood, myId, partnerId]);
 
             // --- ACTIONS ---
             const handleSendMessage = async () => {
@@ -363,12 +382,12 @@
                     <header className="relative z-10 px-8 pt-14 flex justify-between items-center shrink-0">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40 capitalize">
-                                {myId === 'abhishek' ? 'Sana' : 'Abhishek'}
+                                {partnerId}
                             </h1>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className={`w-2 h-2 rounded-full ${partner?.isPressing ? 'bg-green-400 animate-pulse' : 'bg-white/20'}`} />
                                 <span className="text-[10px] text-white/40 uppercase tracking-widest">
-                                    {partner?.isPressing ? 'Touching you now' : 'Connected'}
+                                    {partner?.isPressing ? `Touching you` : 'Connected'}
                                 </span>
                             </div>
                         </div>
@@ -381,7 +400,7 @@
                                 {showInstallTip && (
                                     <div className="glass p-4 rounded-2xl flex items-center gap-4 text-[11px]">
                                         <Icon name="Smartphone" className="text-amber-300" size={24} />
-                                        <p>Tap your browser menu and <strong>"Add to Home Screen"</strong> for the full app experience.</p>
+                                        <p>Tap menu and <strong>"Add to Home Screen"</strong> for full app mode.</p>
                                     </div>
                                 )}
                                 <div className="relative">
@@ -415,7 +434,7 @@
                                 <div className="flex-1 space-y-4 mb-4">
                                     {messages.map(m => (
                                         <div key={m.id} className={`flex flex-col ${m.sender === myId ? 'items-end' : 'items-start'}`}>
-                                            <div className={`relative px-4 py-3 rounded-2xl text-[14px] ${m.sender === myId ? 'bg-white text-black rounded-tr-none' : 'glass rounded-tl-none'}`}>
+                                            <div className={`relative px-4 py-3 rounded-2xl text-[14px] ${m.sender === myId ? 'bg-white text-black rounded-tr-none shadow-lg' : 'glass rounded-tl-none border border-white/10 shadow-xl'}`}>
                                                 {m.text}
                                                 {m.sender !== myId && (
                                                     <button onClick={() => handleListenToMessage(m.id, m.text)} className="absolute -right-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white">
@@ -427,9 +446,10 @@
                                     ))}
                                 </div>
                                 <div className="sticky bottom-0 pb-6">
-                                    <div className="glass p-2 rounded-full flex items-center gap-2">
+                                    <div className="glass p-2 rounded-full flex items-center gap-2 shadow-2xl">
                                         <input 
                                             value={inputMsg} onChange={e => setInputMsg(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                                             placeholder="Whisper your heart..." 
                                             className="flex-1 bg-transparent px-4 py-2 outline-none text-sm placeholder:text-white/30"
                                         />
@@ -458,10 +478,10 @@
                                     </button>
                                 </div>
                                 {dreams.map(d => (
-                                    <div key={d.id} className="glass rounded-[2rem] overflow-hidden">
+                                    <div key={d.id} className="glass rounded-[2rem] overflow-hidden shadow-2xl border border-white/5">
                                         <img src={d.imageUrl} className="w-full aspect-[4/5] object-cover" />
                                         <div className="p-6">
-                                            <p className="text-sm italic text-white/70 font-serif mb-4">"{d.prompt}"</p>
+                                            <p className="text-sm italic text-white/70 font-serif">"{d.prompt}"</p>
                                         </div>
                                     </div>
                                 ))}
@@ -471,12 +491,12 @@
                         {view === 'settings' && (
                             <div className="space-y-10 pt-6 view-transition">
                                 <section>
-                                    <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] mb-6 px-2">How are you feeling?</h3>
+                                    <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] mb-6 px-2 text-center">Your Current Mood</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         {MOODS.map(m => (
                                             <button 
                                                 key={m.id} onClick={() => setMyMood(m.id)}
-                                                className={`flex items-center gap-4 p-5 rounded-[2rem] border transition-all ${myMood === m.id ? 'bg-white text-black' : 'glass'}`}
+                                                className={`flex items-center gap-4 p-5 rounded-[2rem] border transition-all ${myMood === m.id ? 'bg-white text-black border-white shadow-xl' : 'glass border-white/5'}`}
                                             >
                                                 <span className="text-2xl">{m.icon}</span>
                                                 <span className="text-sm font-bold capitalize">{m.id}</span>
@@ -484,19 +504,19 @@
                                         ))}
                                     </div>
                                 </section>
-                                <section className="p-8 rounded-[2.5rem] border border-rose-500/20 bg-rose-500/5">
-                                    <h3 className="font-bold text-rose-400 mb-2">Private Access</h3>
-                                    <p className="text-xs text-rose-300/60 mb-6">Identity: <strong className="uppercase tracking-widest">{myId}</strong></p>
-                                    <button onClick={() => window.location.hash = myId === 'abhishek' ? 'sana' : 'abhishek'} className="w-full py-4 glass text-xs font-bold uppercase tracking-widest rounded-2xl text-rose-200">Switch Identity</button>
+                                <section className="p-8 rounded-[2.5rem] border border-rose-500/20 bg-rose-500/5 shadow-inner">
+                                    <h3 className="font-bold text-rose-400 mb-2">Private Portal</h3>
+                                    <p className="text-xs text-rose-300/60 mb-6">You are logged in as <strong className="uppercase tracking-widest text-rose-200">{myId}</strong></p>
+                                    <button onClick={() => window.location.hash = myId === 'abhishek' ? 'sana' : 'abhishek'} className="w-full py-4 glass text-xs font-bold uppercase tracking-widest rounded-2xl text-rose-200 hover:bg-white/10 active:scale-[0.98] transition-all">Switch to {partnerId}</button>
                                 </section>
                             </div>
                         )}
                     </main>
 
-                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 glass p-2 rounded-full flex gap-2 z-50">
-                        <button onClick={() => setView('home')} className={`p-5 rounded-full transition-all ${view === 'home' ? 'bg-white text-black scale-110' : 'text-white'}`}><Icon name="Heart" size={22} fill={view === 'home' ? 'currentColor' : 'none'} /></button>
-                        <button onClick={() => setView('chat')} className={`p-5 rounded-full transition-all ${view === 'chat' ? 'bg-white text-black scale-110' : 'text-white'}`}><Icon name="MessageCircle" size={22} /></button>
-                        <button onClick={() => setView('dreams')} className={`p-5 rounded-full transition-all ${view === 'dreams' ? 'bg-white text-black scale-110' : 'text-white'}`}><Icon name="Cloud" size={22} /></button>
+                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 glass p-2 rounded-full flex gap-2 z-50 shadow-2xl">
+                        <button onClick={() => setView('home')} className={`p-5 rounded-full transition-all ${view === 'home' ? 'bg-white text-black scale-110 shadow-lg' : 'text-white'}`}><Icon name="Heart" size={22} fill={view === 'home' ? 'currentColor' : 'none'} /></button>
+                        <button onClick={() => setView('chat')} className={`p-5 rounded-full transition-all ${view === 'chat' ? 'bg-white text-black scale-110 shadow-lg' : 'text-white'}`}><Icon name="MessageCircle" size={22} /></button>
+                        <button onClick={() => setView('dreams')} className={`p-5 rounded-full transition-all ${view === 'dreams' ? 'bg-white text-black scale-110 shadow-lg' : 'text-white'}`}><Icon name="Cloud" size={22} /></button>
                     </nav>
                 </div>
             );
@@ -506,4 +526,4 @@
         root.render(<App />);
     </script>
 </body>
-</html>
+</html>s
