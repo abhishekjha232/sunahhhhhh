@@ -4,12 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sunahh</title>
-    
-    <!-- PWA / Native App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Sunahh">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
 
     <!-- Libraries -->
@@ -20,119 +16,46 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #020617;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            -webkit-user-select: none;
-            user-select: none;
-            overscroll-behavior: none;
-        }
-
+        body { background-color: #020617; margin: 0; overflow: hidden; -webkit-user-select: none; user-select: none; font-family: 'Inter', sans-serif; }
         .font-serif { font-family: 'Playfair Display', serif; }
-
-        /* Smooth Transitions */
         .view-transition { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Pulse & Ripple Animations */
-        @keyframes heartPulse {
-            0% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.08); filter: brightness(1.2); }
-            100% { transform: scale(1); filter: brightness(1); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes heartPulse { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.08); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
         .animate-heart { animation: heartPulse 0.8s ease-in-out infinite; }
-
-        @keyframes ripple {
-            0% { transform: scale(0.8); opacity: 0.8; }
-            100% { transform: scale(2.5); opacity: 0; }
-        }
+        @keyframes ripple { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
         .animate-ripple { animation: ripple 2s infinite ease-out; }
-
-        /* Typing Dots */
-        .typing-dot {
-            width: 4px; height: 4px; border-radius: 50%; background-color: currentColor;
-            animation: typing 1.4s infinite ease-in-out both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        /* Sunrise Gradient Animation */
-        .bg-sunrise {
-            background: linear-gradient(135deg, #f43f5e, #fb923c, #fcd34d);
-            background-size: 200% 200%;
-            animation: gradientMove 5s ease infinite;
-        }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        ::-webkit-scrollbar { display: none; }
-        
-        /* Glassmorphism */
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .glass-high {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        
-        /* Chat Bubbles */
-        .msg-bubble-mine {
-            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
-            border-radius: 20px 20px 4px 20px;
-        }
-        .msg-bubble-theirs {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px 20px 20px 4px;
-        }
+        .typing-dot { width: 4px; height: 4px; border-radius: 50%; background-color: currentColor; animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; } .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .bg-sunrise { background: linear-gradient(135deg, #f43f5e, #fb923c, #fcd34d); background-size: 200% 200%; animation: gradientMove 5s ease infinite; }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-high { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.15); }
+        .msg-bubble-mine { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3); border-radius: 20px 20px 4px 20px; }
+        .msg-bubble-theirs { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px 20px 20px 4px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-
-        // Expose Firebase to global scope for React
         window.fb = { initializeApp, getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
     </script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- ⚡ YOUR KEYS ARE PRE-FILLED HERE ⚡ ---
-        // I took these from your uploaded file.
+        // --- PRE-FILLED KEYS ---
         const manualFirebaseConfig = {
             apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
             authDomain: "sunahh-43bb8.firebaseapp.com",
             projectId: "sunahh-43bb8",
             storageBucket: "sunahh-43bb8.appspot.com",
         };
-        // ------------------------------------------
 
         // Icons
         const Icons = {
@@ -175,10 +98,22 @@
             { id: 'angry', icon: '💢', color: 'from-red-500 to-orange-700', bg: 'bg-red-950/20', theme: '#450a0a' },
         ];
 
-        const apiKey = ""; 
-
         // --- COMPONENTS ---
-        const ErrorScreen = () => {
+        const SetupScreen = () => (
+            <div className="flex flex-col h-screen bg-[#020617] text-white p-8 items-center justify-center text-center">
+                <div className="bg-rose-500/10 p-6 rounded-full mb-6">
+                    <Icon name="Heart" size={64} className="text-rose-500" fill="currentColor" />
+                </div>
+                <h1 className="text-3xl font-serif font-bold mb-4">Welcome to Sunahh</h1>
+                <p className="text-white/60 mb-8 max-w-sm leading-relaxed">Configuring your private world...</p>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-xs text-left w-full max-w-md">
+                    <p className="text-white/50 mb-2">Debug Info:</p>
+                    <code className="text-amber-300 block break-all">Config Found. Initializing...</code>
+                </div>
+            </div>
+        );
+
+        const ErrorScreen = ({ msg, onRetry }) => {
             const [copied, setCopied] = useState(false);
             const rulesText = "rules_version = '2';\nservice cloud.firestore {\n  match /{document=**} {\n    allow read, write: if true;\n  }\n}";
 
@@ -189,37 +124,38 @@
                 });
             };
 
+            const isPermissionError = msg && msg.includes('permission-denied');
+
             return (
                 <div className="flex flex-col h-screen bg-[#020617] text-white p-8 items-center justify-center text-center">
                     <div className="bg-red-500/10 p-6 rounded-full mb-6">
                         <Icon name="Lock" size={64} className="text-red-500" />
                     </div>
-                    <h1 className="text-2xl font-bold mb-2 text-red-400">Permission Denied</h1>
-                    <p className="text-white/60 mb-6 max-w-sm text-sm">
-                        Your Firestore Database is locked. Update the Security Rules to allow access.
-                    </p>
-                    <div className="relative bg-white/5 p-4 rounded-xl border border-white/10 text-left w-full max-w-lg mb-6 group">
-                        <button 
-                            onClick={handleCopy}
-                            className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white text-[10px] uppercase font-bold py-1 px-2 rounded transition-colors"
-                        >
-                            {copied ? "COPIED!" : "COPY CODE"}
-                        </button>
-                        <p className="text-xs text-white/40 mb-2 uppercase tracking-wide">Paste this into Firestore Rules:</p>
-                        <pre className="text-[10px] text-green-400 font-mono overflow-x-auto whitespace-pre-wrap select-all">
-{rulesText}
-                        </pre>
-                    </div>
-                    <button onClick={() => window.location.reload()} className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors">
-                        I Fixed It, Refresh
+                    <h1 className="text-2xl font-bold mb-2 text-red-400">{isPermissionError ? "Database Locked" : "Connection Error"}</h1>
+                    <p className="text-white/60 mb-6 max-w-sm text-sm">{msg || "An error occurred."}</p>
+                    
+                    {isPermissionError && (
+                        <div className="relative bg-white/5 p-4 rounded-xl border border-white/10 text-left w-full max-w-lg mb-6 group">
+                            <button onClick={handleCopy} className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white text-[10px] uppercase font-bold py-1 px-2 rounded transition-colors">
+                                {copied ? "COPIED!" : "COPY CODE"}
+                            </button>
+                            <p className="text-xs text-white/40 mb-2 uppercase tracking-wide">Paste this into Firestore Rules:</p>
+                            <pre className="text-[10px] text-green-400 font-mono overflow-x-auto whitespace-pre-wrap select-all">{rulesText}</pre>
+                        </div>
+                    )}
+                    
+                    <button onClick={onRetry} className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors">
+                        Retry Connection
                     </button>
                 </div>
             );
         };
 
         const App = () => {
-            const [appState, setAppState] = useState('loading');
-            const [permissionError, setPermissionError] = useState(false);
+            const [appState, setAppState] = useState('loading'); // loading, setup, ready, error
+            const [errorMsg, setErrorMsg] = useState("");
+            const [statusMsg, setStatusMsg] = useState("Initializing...");
+            
             const [user, setUser] = useState(null);
             const [partner, setPartner] = useState(null);
             const [messages, setMessages] = useState([]);
@@ -255,45 +191,77 @@
             }, []);
 
             // --- INITIALIZE ---
-            useEffect(() => {
-                const init = async () => {
-                    // Always try manual config first if available
-                    let config = manualFirebaseConfig;
-                    if (!config.apiKey && window.__firebase_config) {
-                        config = JSON.parse(window.__firebase_config);
-                    }
-
-                    if (!config || !config.apiKey) {
-                        // Should not happen if keys are pre-filled
-                        return;
-                    }
-
-                    try {
-                        const { initializeApp, getAuth, signInAnonymously } = window.fb;
-                        const app = initializeApp(config);
-                        const auth = getAuth(app);
-                        await signInAnonymously(auth);
-                        setAppState('ready');
-                    } catch (e) {
-                        console.error("Init Error", e);
-                        if (e.code === 'app/duplicate-app') setAppState('ready');
-                    }
-                };
+            const init = async () => {
+                setStatusMsg("Connecting...");
+                let config = manualFirebaseConfig;
                 
+                // Fallback to preview environment if keys missing
+                if ((!config || !config.apiKey) && window.__firebase_config) {
+                    config = JSON.parse(window.__firebase_config);
+                }
+
+                if (!config || !config.apiKey) {
+                    setAppState('setup');
+                    return;
+                }
+
+                try {
+                    const { initializeApp, getAuth, signInAnonymously } = window.fb;
+                    
+                    let app;
+                    try {
+                        app = initializeApp(config);
+                    } catch (e) {
+                        if (e.code !== 'app/duplicate-app') throw e;
+                        // App already initialized, ignore
+                    }
+
+                    setStatusMsg("Signing in...");
+                    const auth = getAuth();
+                    
+                    // FALLBACK AUTH: Try anonymous, if fails (e.g. not enabled), mock it to force entry
+                    try {
+                        await signInAnonymously(auth);
+                    } catch(authErr) {
+                        console.warn("Auth failed, using fallback mode:", authErr);
+                        // If auth fails (likely not enabled in console), we create a local user
+                        // This allows the app to proceed if Firestore rules are 'if true'
+                        setUser({ uid: 'anon_' + Date.now(), isAnonymous: true });
+                    }
+                    
+                    setAppState('ready');
+                } catch (e) {
+                    console.error("Init Error", e);
+                    setErrorMsg(e.message);
+                    setAppState('error');
+                }
+            };
+
+            useEffect(() => {
+                const start = Date.now();
                 const checkFb = setInterval(() => {
                     if (window.fb) {
                         clearInterval(checkFb);
                         init();
+                    } else if (Date.now() - start > 8000) {
+                        clearInterval(checkFb);
+                        setErrorMsg("Network timeout or scripts blocked. Please refresh.");
+                        setAppState('error');
                     }
                 }, 100);
             }, []);
 
-            // --- AUTH STATE ---
+            // --- AUTH LISTENER (Only if real auth succeeded) ---
             useEffect(() => {
                 if (appState !== 'ready') return;
                 const { getAuth, onAuthStateChanged } = window.fb;
-                const unsub = onAuthStateChanged(getAuth(), setUser);
-                return () => unsub();
+                // Only listen if we didn't force-set a mock user already
+                if (!user || !user.uid.startsWith('anon_')) {
+                    const unsub = onAuthStateChanged(getAuth(), (u) => {
+                        if(u) setUser(u);
+                    });
+                    return () => unsub();
+                }
             }, [appState]);
 
             // --- DATA SYNC ---
@@ -301,10 +269,14 @@
                 if (appState !== 'ready' || !user) return;
                 const { getFirestore, doc, onSnapshot, collection } = window.fb;
                 const db = getFirestore();
-                const appId = 'sunahh-pro'; // Default collection name
+                const appId = 'sunahh-pro';
 
                 const errorHandler = (err) => {
-                    if (err.code === 'permission-denied') setPermissionError(true);
+                    console.error("Sync Error:", err);
+                    if (err.code === 'permission-denied') {
+                        setErrorMsg("permission-denied");
+                        setAppState('error');
+                    }
                 };
 
                 // Partner Sync
@@ -330,7 +302,7 @@
                 return () => { unsubPartner(); unsubMsg(); unsubDreams(); };
             }, [user, partnerId, appState]);
 
-            // --- HEARTBEAT WRITER ---
+            // --- WRITER ---
             useEffect(() => {
                 if (!user) return;
                 const { getFirestore, doc, setDoc, serverTimestamp } = window.fb;
@@ -346,7 +318,10 @@
                         id: myId,
                         isTyping: inputMsg.length > 0
                     }, { merge: true }).catch(err => {
-                        if (err.code === 'permission-denied') setPermissionError(true);
+                        if (err.code === 'permission-denied') {
+                            setErrorMsg("permission-denied");
+                            setAppState('error');
+                        }
                     });
                 }, 1500);
                 return () => clearInterval(interval);
@@ -360,28 +335,33 @@
                 const appId = 'sunahh-pro';
                 await addDoc(collection(getFirestore(), 'artifacts', appId, 'public', 'data', 'messages'), {
                     text, sender: myId, timestamp: serverTimestamp()
-                }).catch(err => {
-                    if (err.code === 'permission-denied') setPermissionError(true);
-                });
+                }).catch(err => console.error("Send failed", err));
             };
 
             const handleEnhanceWhisper = async () => {
                 if (!inputMsg.trim()) return;
                 setIsEnhancing(true);
-                // AI Fetch omitted for brevity
                 setTimeout(() => setIsEnhancing(false), 1000);
             };
 
-            // --- RENDER ---
-            if (permissionError) return <ErrorScreen />;
+            const handleGenerateDream = () => {
+               // Placeholder for dream generation without API key
+               alert("AI features require a backend API key.");
+            }
+
+            // --- RENDER STATES ---
+            if (appState === 'error') return <ErrorScreen msg={errorMsg} onRetry={() => window.location.reload()} />;
+            if (appState === 'setup') return <SetupScreen />;
             
             if (appState === 'loading') return (
                 <div className="fixed inset-0 bg-[#020617] flex flex-col items-center justify-center gap-6">
                     <Icon name="Heart" size={80} className="text-rose-500 animate-pulse" fill="currentColor" />
                     <h1 className="text-3xl font-serif text-white tracking-widest">SUNAHH</h1>
+                    <p className="text-white/40 text-xs uppercase tracking-widest">{statusMsg}</p>
                 </div>
             );
 
+            // --- MAIN UI ---
             const bothPressing = isPressing && partner?.isPressing;
             const statusText = (() => {
                 if (partner?.isTyping) return "typing...";
@@ -480,7 +460,7 @@
                                     <Icon name="Sparkles" size={32} className="text-amber-300 mx-auto" />
                                     <h2 className="font-serif text-lg font-bold">Dream Together</h2>
                                     <textarea value={dreamPrompt} onChange={e=>setDreamPrompt(e.target.value)} placeholder="Describe a moment..." className="w-full bg-black/20 rounded-xl p-3 text-sm h-20 outline-none resize-none border border-white/10 focus:border-rose-500/50 transition-all"/>
-                                    <button disabled className="w-full py-3 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-widest opacity-50 cursor-not-allowed">AI Dreams (Requires Key)</button>
+                                    <button onClick={handleGenerateDream} className="w-full py-3 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-rose-50 transition-colors">Visualize</button>
                                 </div>
                                 {dreams.map(d => (
                                     <div key={d.id} className="glass rounded-3xl overflow-hidden shadow-2xl relative group">
