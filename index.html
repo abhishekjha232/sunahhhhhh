@@ -1,443 +1,526 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Sunahh</title>
-    
-    <!-- PWA Settings -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  collection, 
+  addDoc, 
+  serverTimestamp,
+  query,
+  orderBy
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  signInWithCustomToken, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  Heart, 
+  MessageCircle, 
+  Cloud, 
+  Send, 
+  Mic,
+  Smile,
+  Play,
+  Pause,
+  CheckCheck,
+  Lock,
+  Sparkles,
+  Zap,
+  Sun,
+  Star,
+  Calendar,
+  Coffee,
+  Ghost,
+  Wind,
+  Flame,
+  User,
+  Infinity as InfinityIcon,
+  Anchor,
+  Compass,
+  Trophy,
+  Activity,
+  Layers
+} from 'lucide-react';
 
-    <!-- Libraries -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
-        
-        /* Mobile-First Reset */
-        body, html {
-            background-color: #020617;
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Prevent body scroll */
-            -webkit-user-select: none;
-            user-select: none;
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none;
+// --- CONFIG & CONSTANTS ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
+  authDomain: "sunahh-43bb8.firebaseapp.com",
+  projectId: "sunahh-43bb8",
+  storageBucket: "sunahh-43bb8.appspot.com",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'sunahh-pro';
+
+// --- THE ABHISANA TIMELINE ---
+const START_DATE = new Date('2024-11-03'); 
+
+const MOODS = [
+  { id: 'happy', icon: '✨', label: 'Radiant', bg: 'from-amber-50 via-white to-orange-50', color: 'text-amber-600' },
+  { id: 'calm', icon: '🍃', label: 'Peaceful', bg: 'from-emerald-50 via-white to-teal-50', color: 'text-emerald-600' },
+  { id: 'cozy', icon: '☕', label: 'Warm', bg: 'from-orange-50 via-white to-rose-50', color: 'text-orange-600' },
+  { id: 'sleepy', icon: '☁️', label: 'Dreamy', bg: 'from-slate-100 via-white to-indigo-100', color: 'text-slate-600' },
+  { id: 'missing', icon: '💜', label: 'Longing', bg: 'from-purple-50 via-white to-fuchsia-50', color: 'text-purple-600' },
+];
+
+const App = () => {
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [partner, setPartner] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [moments, setMoments] = useState([]);
+  const [view, setView] = useState('home'); 
+  const [isPressing, setIsPressing] = useState(false);
+  const [inputMsg, setInputMsg] = useState('');
+  const [myMood, setMyMood] = useState('happy');
+  const [isRecording, setIsRecording] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [permissionError, setPermissionError] = useState(false);
+  const [sharedPromise, setSharedPromise] = useState("Holding space for us...");
+
+  const messagesEndRef = useRef(null);
+  const mediaRecorder = useRef(null);
+  const audioChunks = useRef([]);
+
+  const myId = useMemo(() => {
+    const hash = window.location.hash.replace('#', '').toLowerCase();
+    return hash === 'abhishek' ? 'abhishek' : 'sana';
+  }, []);
+  const partnerId = myId === 'abhishek' ? 'sana' : 'abhishek';
+
+  // --- IDENTITY ---
+  const myName = myId === 'abhishek' ? 'Abhishek' : 'Sana';
+  const partnerName = partnerId === 'abhishek' ? 'Abhishek' : 'Sana';
+  
+  // --- COUNTERS ---
+  const daysTogether = useMemo(() => {
+    const diff = Math.abs(new Date() - START_DATE);
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  }, []);
+
+  // --- AUTH & DATA INIT ---
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
         }
+      } catch (err) {
+        setUser({ uid: 'local-' + myId });
+      }
+    };
+    initAuth();
+    const unsub = onAuthStateChanged(auth, (u) => u && setUser(u));
+    return () => unsub();
+  }, [myId]);
 
-        .font-serif { font-family: 'Playfair Display', serif; }
+  useEffect(() => {
+    if (!user) return;
+    const updatePresence = async () => {
+      try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', myId), {
+          uid: user.uid,
+          lastSeen: serverTimestamp(),
+          isPressing,
+          mood: myMood,
+          id: myId,
+          isTyping: inputMsg.length > 0,
+          currentView: view
+        }, { merge: true });
+      } catch (err) {
+        if (err.code === 'permission-denied') setPermissionError(true);
+      }
+    };
+    const interval = setInterval(updatePresence, 2000);
+    return () => clearInterval(interval);
+  }, [user, isPressing, myMood, inputMsg, myId, view]);
 
-        /* Animations */
-        .view-transition { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  useEffect(() => {
+    if (!user) return;
+    
+    const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), (doc) => setPartner(doc.data()));
+    
+    const msgsQuery = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+    const unsubMsgs = onSnapshot(msgsQuery, (snap) => {
+      const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+      setMessages(msgs);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    });
+
+    const unsubMoments = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'moments'), (snap) => {
+      const mms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      mms.sort((a,b) => (b.savedAt?.seconds || 0) - (a.savedAt?.seconds || 0));
+      setMoments(mms);
+    });
+
+    const unsubPromise = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'global', 'promise'), (d) => {
+      if(d.exists()) setSharedPromise(d.data().text);
+    });
+
+    setTimeout(() => setLoading(false), 1000);
+    return () => { unsubPartner(); unsubMsgs(); unsubMoments(); unsubPromise(); };
+  }, [user, partnerId]);
+
+  // --- ACTIONS ---
+  const handleSendMessage = async (customText = null) => {
+    const text = customText || inputMsg;
+    if (!text.trim()) return;
+    setInputMsg('');
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), {
+      text, sender: myId, timestamp: serverTimestamp(), isNudge: !!customText
+    });
+  };
+
+  const updatePromise = async () => {
+    const newP = prompt("Update our shared promise:", sharedPromise);
+    if(newP) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global', 'promise'), {
+        text: newP, updatedBy: myId, timestamp: serverTimestamp()
+      });
+    }
+  };
+
+  const sparkMoment = async (msg) => {
+    if (navigator.vibrate) navigator.vibrate(50);
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'moments'), {
+      text: msg.text, sender: msg.sender, savedAt: serverTimestamp()
+    });
+  };
+
+  // --- AUDIO ---
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      audioChunks.current = [];
+      mediaRecorder.current.ondataavailable = (e) => audioChunks.current.push(e.data);
+      mediaRecorder.current.onstop = handleSendVoice;
+      mediaRecorder.current.start();
+      setIsRecording(true);
+      if(navigator.vibrate) navigator.vibrate(60);
+    } catch (err) { alert("Mic access required for whispers."); }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder.current && isRecording) {
+      mediaRecorder.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleSendVoice = async () => {
+    if (audioChunks.current.length === 0) return;
+    const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), {
+        audio: reader.result, sender: myId, timestamp: serverTimestamp()
+      });
+    };
+  };
+
+  const playVoice = (audioBase64, msgId) => {
+    if (currentlyPlaying === msgId) return;
+    const audio = new Audio(audioBase64);
+    setCurrentlyPlaying(msgId);
+    audio.play();
+    audio.onended = () => setCurrentlyPlaying(null);
+  };
+
+  // --- UI HELPERS ---
+  const partnerMoodData = useMemo(() => MOODS.find(m => m.id === partner?.mood) || MOODS[0], [partner?.mood]);
+  const bothPressing = isPressing && partner?.isPressing;
+  const partnerOnline = partner?.lastSeen && (Date.now() - partner.lastSeen.seconds * 1000 < 60000);
+
+  if (loading) return (
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100]">
+      <div className="relative mb-8 flex flex-col items-center">
+        <Heart size={60} className="text-sky-100 animate-pulse" fill="currentColor" />
+        <h2 className="text-[16px] font-black uppercase tracking-[1.1em] text-slate-400 mt-6 ml-4">Sunahh</h2>
+        <p className="mt-4 text-[9px] font-bold text-slate-200 uppercase tracking-widest">Since Nov 3, 2024</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`fixed inset-0 flex flex-col transition-all duration-1000 font-sans overflow-hidden bg-gradient-to-br ${bothPressing ? 'from-white via-orange-50 to-white' : partnerMoodData.bg}`}>
+      
+      {/* Decorative Atmosphere */}
+      <div className="absolute inset-0 pointer-events-none opacity-40 overflow-hidden">
+        <div className="absolute top-[-20%] left-[-20%] w-[120%] h-[120%] rounded-full blur-[140px] bg-white animate-soft" />
+      </div>
+
+      {/* Main App Container - Responsive Max Width */}
+      <div className="relative z-10 w-full h-full max-w-5xl mx-auto flex flex-col md:border-x md:border-white/20 md:shadow-2xl bg-white/5 backdrop-blur-sm">
         
-        @keyframes heartPulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
-        .animate-heart { animation: heartPulse 0.8s ease-in-out infinite; }
-        
-        @keyframes ripple { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
-        .animate-ripple { animation: ripple 2s infinite ease-out; }
-
-        /* Typing Dots */
-        .typing-dot { width: 4px; height: 4px; border-radius: 50%; background-color: currentColor; animation: typing 1.4s infinite ease-in-out both; }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; } 
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-
-        /* Gradients & Glass */
-        .bg-sunrise { 
-            background: linear-gradient(135deg, #f43f5e, #fb923c, #fcd34d); 
-            background-size: 200% 200%; 
-            animation: gradientMove 5s ease infinite; 
-        }
-        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        
-        .glass { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .glass-high { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        
-        /* Chat Bubbles */
-        .msg-bubble-mine { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); border-radius: 18px 18px 4px 18px; }
-        .msg-bubble-theirs { background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); border-radius: 18px 18px 18px 4px; }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* Safe Area for Mobile Nav */
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        window.fb = { initializeApp, getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
-    </script>
-
-    <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
-
-        // --- PRE-FILLED KEYS (Your actual keys) ---
-        const manualFirebaseConfig = {
-            apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
-            authDomain: "sunahh-43bb8.firebaseapp.com",
-            projectId: "sunahh-43bb8",
-            storageBucket: "sunahh-43bb8.appspot.com",
-        };
-
-        // --- ICONS ---
-        const Icon = ({ name, size = 24, className = "", fill = "none" }) => {
-            const icons = {
-                Heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
-                MessageCircle: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
-                Cloud: <path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.812-2.112-5.132-4.832-5.447C17.712 5.093 15.088 3 12 3c-2.73 0-5.074 1.637-6.095 4.02C3.393 7.545 1.5 9.551 1.5 12c0 2.761 2.239 5 5 5h11Z" />,
-                Send: <g><path d="m22 2-7 20-4-9-9-4Z" /><line x1="22" x2="11" y1="2" y2="13" /></g>,
-                Sparkles: <g><path d="m12 3 1.912 5.813a2 2 0 0 1 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 1-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 1-1.275-1.275L3 12l5.813-1.912a2 2 0 0 1 1.275-1.275L12 3Z" /></g>,
-                MapPin: <g><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></g>,
-                Clock: <g><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></g>,
-                Smile: <g><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></g>,
-                CheckDouble: <g><path d="M7 12l5 5l10 -10" /><path d="M2 12l5 5m5 -5l5 -5" /></g>,
-                ArrowLeft: <g><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></g>,
-                AlertTriangle: <g><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12.01" y1="17" y2="17" /></g>,
-                Lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
-            };
-            return (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    {icons[name]}
-                </svg>
-            );
-        };
-
-        const MOODS = [
-            { id: 'love', icon: '💖', color: 'from-pink-500 to-rose-600', bg: 'bg-rose-950/20' },
-            { id: 'missing', icon: '🥺', color: 'from-blue-400 to-indigo-600', bg: 'bg-indigo-950/20' },
-            { id: 'joy', icon: '✨', color: 'from-amber-300 to-orange-500', bg: 'bg-amber-950/20' },
-            { id: 'tired', icon: '😴', color: 'from-purple-400 to-violet-700', bg: 'bg-violet-950/20' },
-            { id: 'angry', icon: '💢', color: 'from-red-500 to-orange-700', bg: 'bg-red-950/20' },
-        ];
-
-        // --- COMPONENTS ---
-        const SetupScreen = () => (
-            <div className="flex flex-col h-full bg-[#020617] text-white p-8 items-center justify-center text-center">
-                <div className="bg-rose-500/10 p-6 rounded-full mb-6 animate-pulse">
-                    <Icon name="Heart" size={64} className="text-rose-500" fill="currentColor" />
-                </div>
-                <h1 className="text-2xl font-serif font-bold mb-2">Connecting...</h1>
-                <p className="text-white/50 text-sm">Establishing secure link to Sunahh...</p>
+        {/* Sanctuary Header */}
+        <header className="flex-none px-6 py-5 md:py-8 flex justify-between items-center bg-white/20 backdrop-blur-3xl border-b border-white/40 pt-[max(env(safe-area-inset-top),1.5rem)]">
+          <div className="flex items-center gap-5">
+            <div className="relative group cursor-pointer" onClick={() => setView('settings')}>
+              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-[1.8rem] bg-white shadow-2xl flex items-center justify-center text-4xl border-2 border-white transition-all duration-700 ${partner?.isPressing ? 'scale-110 rotate-12' : ''}`}>
+                {partnerMoodData.icon}
+              </div>
+              {partnerOnline && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 border-[4px] border-white rounded-full shadow-lg" />
+              )}
             </div>
-        );
+            <div>
+              <h1 className="font-serif font-black text-slate-900 text-xl md:text-2xl capitalize tracking-tighter leading-none">
+                My {partnerName}
+              </h1>
+              <p className={`text-[9px] md:text-[10px] mt-2 uppercase font-black tracking-[0.3em] transition-colors ${partner?.isTyping ? 'text-sky-500' : 'text-slate-400/60'}`}>
+                {partner?.isTyping ? "Whispering..." : (partnerOnline ? "Breathing with you" : "Resting quietly")}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2.5">
+             <button onClick={() => handleSendMessage(`⭐ Close your eyes, I'm thinking of you...`)} className="w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-2xl bg-white/70 text-rose-300 border border-white shadow-sm active:scale-75 transition-all">
+               <Star size={20} fill="currentColor" />
+             </button>
+             <button onClick={() => setView('settings')} className="w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-2xl bg-white/70 text-slate-400 border border-white shadow-sm active:scale-75 transition-all">
+               <Smile size={22} />
+             </button>
+          </div>
+        </header>
 
-        const ErrorScreen = ({ msg, onRetry }) => {
-            const [copied, setCopied] = useState(false);
-            const rulesText = "rules_version = '2';\nservice cloud.firestore {\n  match /{document=**} {\n    allow read, write: if true;\n  }\n}";
-            const handleCopy = () => {
-                navigator.clipboard.writeText(rulesText).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-            };
-            const isPermissionError = msg && msg.includes('permission-denied');
-
-            return (
-                <div className="flex flex-col h-full bg-[#020617] text-white p-8 items-center justify-center text-center">
-                    <div className="bg-red-500/10 p-6 rounded-full mb-6"><Icon name="Lock" size={64} className="text-red-500" /></div>
-                    <h1 className="text-xl font-bold mb-2 text-red-400">{isPermissionError ? "Database Locked" : "Connection Error"}</h1>
-                    <p className="text-white/60 mb-6 text-sm max-w-xs">{msg || "An error occurred."}</p>
-                    {isPermissionError && (
-                        <div className="relative bg-white/5 p-4 rounded-xl border border-white/10 text-left w-full max-w-sm mb-6">
-                            <button onClick={handleCopy} className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white text-[10px] uppercase font-bold py-1 px-2 rounded">{copied ? "COPIED" : "COPY CODE"}</button>
-                            <p className="text-[10px] text-white/40 mb-2 uppercase tracking-wide">Paste in Firestore Rules:</p>
-                            <pre className="text-[10px] text-green-400 font-mono overflow-x-auto whitespace-pre-wrap">{rulesText}</pre>
-                        </div>
-                    )}
-                    <button onClick={onRetry} className="bg-white text-black px-6 py-3 rounded-xl font-bold text-sm">Retry</button>
+        {/* Viewport Content */}
+        <main className="flex-1 relative overflow-hidden flex flex-col">
+          
+          {/* HOME: The AbhiSana Connection */}
+          {view === 'home' && (
+            <div className="flex-1 flex flex-col items-center justify-between p-8 md:p-12 pb-20 view-transition overflow-y-auto no-scrollbar">
+              <div className="text-center space-y-4 md:mt-4">
+                <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-white/70 rounded-full border border-white shadow-lg">
+                  <Flame size={16} className="text-orange-400 animate-pulse" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">The Soul Link is Active</span>
                 </div>
-            );
-        };
+                <h2 className="font-serif text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-tight">Welcome Home, {myName}</h2>
+                <p className="text-slate-400 text-sm md:text-base font-serif italic px-6 md:px-24 leading-relaxed max-w-2xl mx-auto">
+                  {partner?.isPressing ? `${partnerName} is holding her screen, reaching across the miles...` : `We've shared ${daysTogether} beautiful days since November 3rd.`}
+                </p>
+              </div>
 
-        const App = () => {
-            const [appState, setAppState] = useState('loading');
-            const [errorMsg, setErrorMsg] = useState("");
-            const [user, setUser] = useState(null);
-            const [partner, setPartner] = useState(null);
-            const [messages, setMessages] = useState([]);
-            const [dreams, setDreams] = useState([]);
-            const [view, setView] = useState('home'); 
-            const [isPressing, setIsPressing] = useState(false);
-            const [inputMsg, setInputMsg] = useState('');
-            const [myMood, setMyMood] = useState('love');
-            const [currentTime, setCurrentTime] = useState(new Date());
-            const messagesEndRef = useRef(null);
+              {/* Central Connection Point */}
+              <div className="relative my-8 md:my-10">
+                {bothPressing && <div className="absolute inset-[-140px] rounded-full bg-white blur-[110px] animate-pulse opacity-100" />}
+                <button
+                  onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)}
+                  onTouchStart={() => setIsPressing(true)} onTouchEnd={() => setIsPressing(false)}
+                  className={`relative w-72 h-72 md:w-96 md:h-96 rounded-[6rem] md:rounded-[8rem] flex flex-col items-center justify-center transition-all duration-1000 active:scale-90 shadow-2xl
+                    ${bothPressing ? 'bg-white shadow-[0_0_180px_rgba(255,255,255,1)] scale-110 rotate-6' : 'bg-white/95 border-2 border-white'}
+                  `}
+                >
+                  <Heart size={bothPressing ? 130 : 100} fill={isPressing || partner?.isPressing ? "#38bdf8" : "none"} 
+                    className={`transition-all duration-1000 ${isPressing || partner?.isPressing ? 'text-sky-400 scale-125' : 'text-slate-100 opacity-40'}`} 
+                  />
+                  <div className="absolute bottom-12 md:bottom-16">
+                     <span className={`text-[11px] md:text-[13px] font-black uppercase tracking-[0.6em] transition-all ${bothPressing ? 'text-sky-400 opacity-100 animate-pulse' : 'text-slate-200 opacity-50'}`}>
+                       {bothPressing ? "In Harmony" : "Touch for Warmth"}
+                     </span>
+                  </div>
+                </button>
+              </div>
+              
+              <div className="w-full max-w-xl flex flex-col gap-4 md:gap-6">
+                 <div onClick={updatePromise} className="w-full bg-white/70 p-7 rounded-[3rem] border-2 border-white shadow-xl flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all group overflow-hidden">
+                    <Anchor size={18} className="text-sky-300 mb-4 group-hover:rotate-45 transition-transform" />
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-2">Today's Sacred Vow</p>
+                    <p className="text-base font-serif italic font-black text-slate-800 px-6">"{sharedPromise}"</p>
+                 </div>
 
-            // Identity
-            const [myId, setMyId] = useState(() => {
-                const hash = window.location.hash.replace('#', '').toLowerCase();
-                return hash === 'abhishek' ? 'abhishek' : 'sana';
-            });
-            const partnerId = myId === 'abhishek' ? 'sana' : 'abhishek';
+                 <div className="w-full bg-white/50 p-6 rounded-[2.8rem] border border-white flex flex-col items-center text-center shadow-sm">
+                    <InfinityIcon size={20} className="text-rose-300 mb-2" />
+                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Our Journey Together</p>
+                    <p className="text-xl font-black text-slate-800">{daysTogether} Days</p>
+                 </div>
+              </div>
+            </div>
+          )}
 
-            useEffect(() => {
-                const handleHashChange = () => setMyId(window.location.hash.replace('#', '').toLowerCase() === 'abhishek' ? 'abhishek' : 'sana');
-                window.addEventListener('hashchange', handleHashChange);
-                const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-                return () => {
-                    window.removeEventListener('hashchange', handleHashChange);
-                    clearInterval(timer);
-                }
-            }, []);
-
-            // Init
-            useEffect(() => {
-                const init = async () => {
-                    let config = manualFirebaseConfig;
-                    if (!config.apiKey) { setAppState('setup'); return; }
-
-                    try {
-                        const { initializeApp, getAuth, signInAnonymously } = window.fb;
-                        let app;
-                        try { app = initializeApp(config); } 
-                        catch (e) { if(e.code !== 'app/duplicate-app') throw e; } // Ignore duplicate init
-
-                        const auth = getAuth();
-                        await signInAnonymously(auth); // Try real auth
-                        setAppState('ready');
-                    } catch (e) {
-                        console.warn("Auth failed, assuming loose rules mode:", e);
-                        setUser({ uid: 'anon_' + Date.now() }); // Fallback for permission-denied check later
-                        setAppState('ready'); 
-                    }
-                };
-                
-                const checkFb = setInterval(() => {
-                    if (window.fb) { clearInterval(checkFb); init(); }
-                }, 100);
-            }, []);
-
-            // Auth Listener
-            useEffect(() => {
-                if (appState !== 'ready') return;
-                const { getAuth, onAuthStateChanged } = window.fb;
-                try {
-                    const unsub = onAuthStateChanged(getAuth(), (u) => { if(u) setUser(u); });
-                    return () => unsub();
-                } catch(e) {}
-            }, [appState]);
-
-            // Sync
-            useEffect(() => {
-                if (appState !== 'ready' || !user) return;
-                const { getFirestore, doc, onSnapshot, collection } = window.fb;
-                const db = getFirestore();
-                const appId = 'sunahh-pro';
-
-                const errorHandler = (err) => {
-                    if (err.code === 'permission-denied') { setErrorMsg(err.message); setAppState('error'); }
-                };
-
-                const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), 
-                    (d) => d.exists() && setPartner(d.data()), errorHandler
-                );
-
-                const unsubMsg = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), (snap) => {
-                    const msgs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                    msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                    setMessages(msgs);
-                    setTimeout(() => messagesEndRef.current?.scrollIntoView({behavior:'smooth'}), 100);
-                }, errorHandler);
-
-                const unsubDreams = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'dreams'), (snap) => {
-                    const drms = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                    drms.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-                    setDreams(drms);
-                }, errorHandler);
-
-                return () => { unsubPartner(); unsubMsg(); unsubDreams(); };
-            }, [user, partnerId, appState]);
-
-            // Heartbeat
-            useEffect(() => {
-                if (!user) return;
-                const { getFirestore, doc, setDoc, serverTimestamp } = window.fb;
-                const db = getFirestore();
-                const appId = 'sunahh-pro';
-
-                // Initial "I am here" ping
-                const ping = () => {
-                    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', myId), {
-                        uid: user.uid, lastSeen: serverTimestamp(), isPressing, mood: myMood, id: myId, isTyping: inputMsg.length > 0
-                    }, { merge: true }).catch(err => { if (err.code === 'permission-denied') { setErrorMsg(err.message); setAppState('error'); }});
-                };
-                ping();
-
-                const interval = setInterval(ping, 2000);
-                return () => clearInterval(interval);
-            }, [user, isPressing, myMood, myId, inputMsg]);
-
-            const handleSendMessage = async () => {
-                if (!inputMsg.trim()) return;
-                const text = inputMsg; setInputMsg('');
-                const { getFirestore, collection, addDoc, serverTimestamp } = window.fb;
-                const appId = 'sunahh-pro';
-                await addDoc(collection(getFirestore(), 'artifacts', appId, 'public', 'data', 'messages'), {
-                    text, sender: myId, timestamp: serverTimestamp()
-                }).catch(err => console.error(err));
-            };
-
-            // --- RENDER ---
-            if (appState === 'error') return <ErrorScreen msg={errorMsg} onRetry={() => window.location.reload()} />;
-            if (appState === 'setup') return <SetupScreen />;
-            if (appState === 'loading') return <div className="fixed inset-0 bg-[#020617] flex items-center justify-center"><Icon name="Heart" size={60} className="text-rose-500 animate-pulse" fill="currentColor"/></div>;
-
-            const bothPressing = isPressing && partner?.isPressing;
-            const statusText = (() => {
-                if (partner?.isTyping) return "typing...";
-                if (!partner?.lastSeen) return "Offline";
-                const diff = Date.now() - (partner.lastSeen.seconds * 1000);
-                return diff < 90000 ? "Online" : "Last seen recently";
-            })();
-
-            return (
-                /* Use fixed inset-0 to act as a proper app container on mobile */
-                <div className={`fixed inset-0 flex flex-col transition-all duration-1000 ${bothPressing ? 'bg-sunrise' : (MOODS.find(m=>m.id===partner?.mood)?.bg || 'bg-[#020617]')} text-white`}>
-                    
-                    {/* Header */}
-                    <div className="flex-none px-4 py-3 flex justify-between items-center bg-black/20 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white font-bold text-lg capitalize shadow-lg">
-                                {partnerId[0]}
-                            </div>
-                            <div className="flex flex-col">
-                                <h1 className="font-serif font-bold text-lg capitalize leading-none mb-1">{partnerId}</h1>
-                                <div className="flex items-center gap-1.5 h-3">
-                                    {partner?.isTyping ? 
-                                        <><span className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Typing</span><div className="typing-dot bg-green-400"/><div className="typing-dot bg-green-400"/><div className="typing-dot bg-green-400"/></>
-                                        : 
-                                        <><div className={`w-1.5 h-1.5 rounded-full ${statusText === 'Online' ? 'bg-green-400 shadow-[0_0_5px_lime]' : 'bg-white/30'}`}/><span className="text-[10px] text-white/50 uppercase tracking-wider">{statusText}</span></>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                        <button onClick={() => setView('settings')} className="p-2 glass rounded-full active:scale-95"><Icon name="Smile" size={24} /></button>
+          {/* TALK: The Whisper Channel */}
+          {view === 'chat' && (
+            <div className="flex-1 flex flex-col h-full view-transition bg-white/5 backdrop-blur-xl relative">
+              <div className="flex-1 overflow-y-auto px-6 md:px-24 py-12 space-y-12 no-scrollbar">
+                {messages.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center opacity-30 text-slate-400">
+                    <Wind size={50} className="mb-8 animate-soft" />
+                    <p className="text-lg font-serif italic text-center px-20 leading-relaxed max-w-md">
+                      Let the words flow, {myName}. Your {partnerName} is listening to every whisper.
+                    </p>
+                  </div>
+                )}
+                {messages.map((m) => (
+                  <div key={m.id} className={`flex flex-col ${m.sender === myId ? 'items-end' : 'items-start'}`}>
+                    <div className={`max-w-[85%] md:max-w-[65%] px-7 py-5 shadow-2xl relative group border transition-all duration-700 ${
+                      m.sender === myId 
+                      ? 'bg-slate-900 text-white border-slate-800 rounded-[35px] rounded-br-none' 
+                      : 'bg-white text-slate-800 border-slate-100 rounded-[35px] rounded-bl-none shadow-lg'
+                    }`}>
+                      {m.text && <p className={`text-[16px] font-medium leading-relaxed ${m.isNudge ? 'text-sky-300 italic font-black text-lg' : ''}`}>{m.text}</p>}
+                      {m.audio && (
+                        <button onClick={() => playVoice(m.audio, m.id)} className="flex items-center gap-6 py-2">
+                          <div className={`p-4 rounded-full ${m.sender === myId ? 'bg-white/10' : 'bg-slate-50 border border-slate-100'}`}>
+                            {currentlyPlaying === m.id ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
+                          </div>
+                          <div className="flex gap-2.5 h-10 items-center">
+                            {[1,2,3,4,5,6,7,8,9,10].map(i => <div key={i} className={`w-1 rounded-full bg-current transition-all duration-500 ${currentlyPlaying === m.id ? 'animate-pulse h-10 opacity-70' : 'h-4 opacity-10'}`} style={{animationDelay: `${i*0.08}s`}} />)}
+                          </div>
+                        </button>
+                      )}
+                      <div className="flex items-center justify-between gap-10 mt-5">
+                         <button onClick={() => sparkMoment(m)} className="opacity-0 group-hover:opacity-100 p-2.5 bg-amber-50 rounded-2xl transition-all hover:scale-125 shadow-sm">
+                           <Star size={16} className="text-amber-400" fill="currentColor" />
+                         </button>
+                         <div className="flex items-center gap-2 opacity-30">
+                           <span className="text-[10px] font-black uppercase tracking-widest">
+                             {m.timestamp ? new Date(m.timestamp.seconds * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '...'}
+                           </span>
+                           {m.sender === myId && <CheckCheck size={16} strokeWidth={4} />}
+                         </div>
+                      </div>
                     </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
 
-                    {/* Main Content (Scrollable) */}
-                    <main className="flex-1 relative overflow-hidden flex flex-col">
-                        
-                        {/* HOME */}
-                        {view === 'home' && (
-                            <div className="flex-1 flex flex-col items-center justify-center gap-12 p-6 view-transition">
-                                <div className="text-center">
-                                    <p className="font-serif italic text-xl text-white/80 mb-2">{bothPressing ? "Connected Hearts" : "Touch to Connect"}</p>
-                                    <p className="text-xs text-white/40 uppercase tracking-[0.2em]">{bothPressing ? "You are together now" : (partner?.isPressing ? "She is waiting..." : "Press and hold")}</p>
-                                </div>
-                                <div className="relative">
-                                    {bothPressing && <div className="absolute inset-0 bg-amber-200/40 rounded-full blur-3xl animate-pulse" />}
-                                    {partner?.isPressing && !bothPressing && <div className="absolute inset-0 border-[3px] border-blue-400/50 rounded-full animate-ping" />}
-                                    {isPressing && !bothPressing && <div className="absolute inset-0 bg-white/10 rounded-full animate-ping" />}
-                                    
-                                    <button
-                                        onMouseDown={() => setIsPressing(true)} onMouseUp={() => setIsPressing(false)}
-                                        onTouchStart={() => setIsPressing(true)} onTouchEnd={() => setIsPressing(false)}
-                                        className={`relative w-64 h-64 rounded-full glass-high flex items-center justify-center transition-all duration-700 
-                                            ${bothPressing ? 'scale-110 border-4 border-white shadow-[0_0_100px_gold]' : 'shadow-2xl'}
-                                            ${!bothPressing && partner?.isPressing ? 'border-2 border-blue-400' : ''}`}
-                                    >
-                                        <Icon name="Heart" size={100} fill={isPressing || partner?.isPressing ? "currentColor" : "none"} 
-                                            className={`transition-all duration-500 ${bothPressing ? 'text-white animate-heart' : (partner?.isPressing ? 'text-blue-400' : (isPressing ? 'text-rose-500' : 'text-white/20'))}`} 
-                                        />
-                                        {!bothPressing && <div className="absolute top-4 right-8 text-3xl animate-bounce">{MOODS.find(m=>m.id===partner?.mood)?.icon}</div>}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* CHAT - Improved Flex Layout for Mobile */}
-                        {view === 'chat' && (
-                            <div className="flex-1 flex flex-col h-full view-transition relative">
-                                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 no-scrollbar">
-                                    {messages.length === 0 && <div className="h-full flex items-center justify-center text-white/20 text-sm">Start your story...</div>}
-                                    {messages.map(m => (
-                                        <div key={m.id} className={`flex ${m.sender === myId ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[80%] px-4 py-2 relative shadow-md text-sm ${m.sender === myId ? 'msg-bubble-mine text-white' : 'msg-bubble-theirs text-white/90'}`}>
-                                                {m.text}
-                                                <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
-                                                    <span className="text-[9px]">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '...'}</span>
-                                                    {m.sender === myId && <Icon name="CheckDouble" size={12} className="text-blue-200" />}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div ref={messagesEndRef} />
-                                </div>
-                                {/* Sticky Input Area */}
-                                <div className="flex-none p-3 bg-black/20 backdrop-blur-md border-t border-white/5 flex gap-2 pb-safe">
-                                    <input value={inputMsg} onChange={e=>setInputMsg(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSendMessage()} placeholder="Message..." className="flex-1 bg-white/10 rounded-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:bg-white/20 outline-none transition-all" />
-                                    <button onClick={handleSendMessage} className="p-3 bg-rose-600 rounded-full text-white shadow-lg active:scale-95"><Icon name="Send" size={20} /></button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* DREAMS (Gallery Only) */}
-                        {view === 'dreams' && (
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar view-transition">
-                                {dreams.length === 0 && (
-                                    <div className="text-center text-white/40 mt-12 flex flex-col items-center gap-4">
-                                        <Icon name="Cloud" size={48} />
-                                        <p>Shared Dream Gallery</p>
-                                    </div>
-                                )}
-                                {dreams.map(d => (
-                                    <div key={d.id} className="glass rounded-3xl overflow-hidden shadow-2xl relative group">
-                                        <img src={d.imageUrl} className="w-full aspect-[4/5] object-cover" />
-                                        <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent">
-                                            <p className="font-serif italic text-sm text-white/90">"{d.prompt}"</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* SETTINGS */}
-                        {view === 'settings' && (
-                            <div className="flex-1 p-6 space-y-8 view-transition pt-12 overflow-y-auto">
-                                <div className="text-center space-y-2">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-white/40">Current Mood</p>
-                                    <div className="flex justify-center gap-4 flex-wrap">
-                                        {MOODS.map(m => (
-                                            <button key={m.id} onClick={()=>setMyMood(m.id)} className={`p-4 rounded-2xl border transition-all ${myMood===m.id ? 'bg-white text-black border-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'glass border-white/5'}`}>
-                                                <span className="text-2xl">{m.icon}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="glass p-6 rounded-3xl space-y-4">
-                                    <h3 className="font-serif font-bold text-rose-300">Identity</h3>
-                                    <p className="text-xs text-white/60">Logged in as <strong className="text-white uppercase">{myId}</strong></p>
-                                    <button onClick={() => window.location.hash = myId === 'abhishek' ? 'sana' : 'abhishek'} className="w-full py-3 border border-white/10 rounded-xl text-xs uppercase hover:bg-white/5">Switch User</button>
-                                </div>
-                            </div>
-                        )}
-                    </main>
-
-                    {/* NAV */}
-                    <nav className="flex-none bg-black/40 backdrop-blur-xl border-t border-white/5 pt-2 pb-safe flex justify-around z-20">
-                        {['home', 'chat', 'dreams'].map(tab => (
-                            <button key={tab} onClick={()=>setView(tab)} className={`p-4 transition-all ${view===tab ? 'text-rose-500 scale-110' : 'text-white/40 hover:text-white/70'}`}>
-                                <Icon name={tab==='home'?'Heart':tab==='chat'?'MessageCircle':'Cloud'} size={26} fill={view===tab?"currentColor":"none"} />
-                            </button>
-                        ))}
-                    </nav>
+              {/* Chat Input Bar */}
+              <div className="flex-none p-6 md:px-24 bg-white/70 backdrop-blur-3xl border-t border-white/60 flex items-center gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
+                <div className="flex-1 bg-white/50 rounded-[3.5rem] border-2 border-slate-100 px-8 py-1 flex items-center gap-3 shadow-inner group focus-within:bg-white transition-all">
+                  <input 
+                    value={inputMsg} 
+                    onChange={e => setInputMsg(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                    placeholder={`Whisper to ${partnerName}...`} 
+                    className="flex-1 py-5 text-[16px] text-slate-800 bg-transparent outline-none font-bold placeholder:text-slate-300" 
+                  />
                 </div>
-            );
-        };
+                {inputMsg.length > 0 ? (
+                  <button onClick={() => handleSendMessage()} className="p-6 bg-slate-900 text-white rounded-[2.2rem] shadow-2xl active:scale-90 transition-all border-2 border-slate-800">
+                    <Send size={24} strokeWidth={3} />
+                  </button>
+                ) : (
+                  <button onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}
+                    className={`p-6 rounded-[2.2rem] transition-all duration-300 shadow-2xl active:scale-110 border-2 ${isRecording ? 'bg-rose-500 text-white border-rose-400 scale-125' : 'bg-white text-sky-400 border-white shadow-sky-50'}`}
+                  >
+                    <Mic size={28} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+          {/* SPARKS: The Shared Gallery */}
+          {view === 'dreams' && (
+            <div className="flex-1 overflow-y-auto p-10 md:p-24 space-y-16 no-scrollbar view-transition bg-white/5 backdrop-blur-sm">
+              <div className="text-center py-4">
+                <h2 className="font-serif text-6xl font-black text-slate-900 tracking-tighter">AbhiSana Wall</h2>
+                <p className="text-[11px] uppercase font-black tracking-[0.8em] text-slate-300 mt-6">Captured Forever</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pb-40">
+                {moments.length === 0 && (
+                  <div className="md:col-span-2 p-24 bg-white/40 rounded-[5rem] border-2 border-white text-center shadow-xl">
+                    <Trophy size={50} className="mx-auto text-sky-200 mb-8" />
+                    <p className="italic text-slate-500 text-lg font-serif px-10 leading-relaxed">No shared sparks yet. Press the star icon in your talk to pin a memory here.</p>
+                  </div>
+                )}
+                {moments.map((mm, i) => (
+                  <div key={mm.id} style={{ transform: `rotate(${i % 2 === 0 ? '-2deg' : '2deg'})` }} className="p-8 bg-white rounded-lg shadow-2xl border border-slate-50 group hover:rotate-0 hover:scale-105 transition-all duration-700 cursor-pointer">
+                    <div className="aspect-square bg-slate-50/50 mb-8 flex items-center justify-center p-12 border border-slate-100 relative group-hover:bg-white transition-colors">
+                       <Sparkles size={20} className="absolute top-6 right-6 text-amber-400 opacity-20 group-hover:opacity-100 transition-opacity" />
+                       <p className="text-2xl font-serif italic text-slate-800 leading-tight text-center font-black">"{mm.text}"</p>
+                    </div>
+                    <div className="flex justify-between items-end px-4">
+                       <div className="space-y-1 text-left">
+                          <p className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Written by {mm.sender}</p>
+                          <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                            {mm.savedAt ? new Date(mm.savedAt.seconds * 1000).toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'}) : 'Soul Sync'}
+                          </p>
+                       </div>
+                       <Heart size={24} className="text-rose-100 fill-rose-100 group-hover:scale-150 transition-transform" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PORTAL SETTINGS */}
+          {view === 'settings' && (
+            <div className="flex-1 p-10 md:px-32 space-y-14 view-transition pt-16 overflow-y-auto no-scrollbar">
+              <section className="text-center">
+                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.6em] mb-14">Inner Resonance</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                  {MOODS.map(m => (
+                    <button 
+                      key={m.id} onClick={() => setMyMood(m.id)} 
+                      className={`p-10 rounded-[4rem] transition-all active:scale-95 border-2 flex flex-col items-center gap-5 ${
+                        myMood === m.id ? 'bg-white border-white shadow-2xl scale-110' : 'bg-white/20 border-transparent opacity-30 grayscale'
+                      }`}
+                    >
+                      <span className="text-6xl transition-transform group-active:scale-150">{m.icon}</span>
+                      <span className="text-[10px] font-black tracking-widest text-slate-600 uppercase">{m.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              
+              <section className="bg-white/80 p-14 rounded-[5rem] border-2 border-white shadow-2xl space-y-12 text-center max-w-2xl mx-auto mb-20">
+                <div className="space-y-8">
+                  <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.6em]">Active Soul</p>
+                  <div className="flex items-center justify-center gap-6 bg-slate-50 p-8 rounded-[2.5rem] shadow-inner border border-slate-100 group">
+                     <div className="w-16 h-16 rounded-[2rem] flex items-center justify-center text-white bg-slate-900 shadow-xl group-hover:scale-110 transition-transform">
+                        <User size={30} />
+                     </div>
+                     <p className="text-2xl font-black text-slate-900 uppercase tracking-[0.4em]">{myName}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => window.location.hash = partnerId} 
+                  className="w-full py-8 rounded-[3rem] bg-slate-900 text-white text-[12px] font-black uppercase tracking-[0.6em] shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
+                >
+                  Switch Role
+                </button>
+              </section>
+            </div>
+          )}
+        </main>
+
+        {/* Global Floating Dock Navigation */}
+        <nav className="flex-none bg-white/30 backdrop-blur-3xl border-t border-white/60 pt-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] flex justify-around px-12 z-20 md:px-48">
+          {[
+            { id: 'home', icon: Coffee, label: 'Sanctuary' },
+            { id: 'chat', icon: MessageCircle, label: 'Talk' },
+            { id: 'dreams', icon: Cloud, label: 'Sparks' }
+          ].map(tab => (
+            <button 
+              key={tab.id} onClick={() => setView(tab.id)} 
+              className={`flex flex-col items-center gap-3 transition-all duration-1000 relative ${view === tab.id ? 'text-slate-950 -translate-y-6' : 'text-slate-300 hover:text-slate-400'}`}
+            >
+              <div className={`p-6 rounded-[2.2rem] transition-all duration-700 ${view === tab.id ? 'bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] scale-125 border border-slate-50' : 'bg-transparent'}`}>
+                <tab.icon size={26} strokeWidth={view === tab.id ? 3.5 : 2} fill={view === tab.id ? (tab.id === 'home' ? '#38bdf8' : 'currentColor') : 'none'} />
+              </div>
+              <span className={`text-[10px] font-black uppercase tracking-[0.5em] transition-all duration-700 ${view === tab.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                {tab.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    </div>
+  );
+};
+
+export default App;
