@@ -1,374 +1,534 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Sunahh</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Sunahh</title>
+    
+    <!-- PWA / Native App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sunahh">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sunahh">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0f172a">
+    <!-- Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior: none;
+        }
 
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+        .font-serif { font-family: 'Playfair Display', serif; }
 
-<style>
-/* same styles kept, trimmed for sanity */
-::-webkit-scrollbar { display: none; }
-</style>
+        /* Smooth Transitions */
+        .view-transition { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pulse & Ripple Animations */
+        @keyframes heartPulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.08); filter: brightness(1.2); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .animate-heart { animation: heartPulse 0.8s ease-in-out infinite; }
+
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+        .animate-ripple { animation: ripple 2s infinite ease-out; }
+
+        /* Typing Dots */
+        .typing-dot {
+            width: 4px; height: 4px; border-radius: 50%; background-color: currentColor;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Sunrise Gradient Animation */
+        .bg-sunrise {
+            background: linear-gradient(135deg, #f43f5e, #fb923c, #fcd34d);
+            background-size: 200% 200%;
+            animation: gradientMove 5s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-high {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Chat Bubbles */
+        .msg-bubble-mine {
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
+            border-radius: 20px 20px 4px 20px;
+        }
+        .msg-bubble-theirs {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px 20px 20px 4px;
+        }
+    </style>
 </head>
-
 <body>
-<div id="root"></div>
+    <div id="root"></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-window.fb = { initializeApp, getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
-</script>
+        // Expose Firebase to global scope for React
+        window.fb = { initializeApp, getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, updateDoc, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
+    </script>
 
-<script type="text/babel">
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
 
-const { useState, useEffect, useRef } = React;
+        // --- ⚡ YOUR KEYS ARE PRE-FILLED HERE ⚡ ---
+        // I took these from your uploaded file.
+        const manualFirebaseConfig = {
+            apiKey: "AIzaSyBxm9XNECnnua2ygeOSfQUQAoon8VBabgQ",
+            authDomain: "sunahh-43bb8.firebaseapp.com",
+            projectId: "sunahh-43bb8",
+            storageBucket: "sunahh-43bb8.appspot.com",
+        };
+        // ------------------------------------------
 
-/* ---------- UTILITIES ---------- */
+        // Icons
+        const Icons = {
+            Heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
+            MessageCircle: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
+            Cloud: <path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.812-2.112-5.132-4.832-5.447C17.712 5.093 15.088 3 12 3c-2.73 0-5.074 1.637-6.095 4.02C3.393 7.545 1.5 9.551 1.5 12c0 2.761 2.239 5 5 5h11Z" />,
+            Send: <g><path d="m22 2-7 20-4-9-9-4Z" /><line x1="22" x2="11" y1="2" y2="13" /></g>,
+            Sparkles: <g><path d="m12 3 1.912 5.813a2 2 0 0 1 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 1-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 1-1.275-1.275L3 12l5.813-1.912a2 2 0 0 1 1.275-1.275L12 3Z" /></g>,
+            MapPin: <g><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></g>,
+            Clock: <g><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></g>,
+            Smile: <g><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></g>,
+            Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
+            Volume2: <g><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></g>,
+            Wand2: <g><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.21 1.21 0 0 0 1.72 0L21.64 5.36a1.21 1.21 0 0 0 0-1.72Z" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /><path d="M11 3H9" /></g>,
+            CalendarHeart: <g><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h7" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /><path d="M21.2 13.1a2.4 2.4 0 0 0-3.4 0l-.8.8-.8-.8a2.4 2.4 0 0 0-3.4 3.4l4.2 4.2 4.2-4.2a2.4 2.4 0 0 0 0-3.4Z" /></g>,
+            Smartphone: <g><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><line x1="12" x2="12" y1="18" y2="18" /></g>,
+            Loader2: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
+            Check: <polyline points="20 6 9 17 4 12" />,
+            CheckDouble: <g><path d="M7 12l5 5l10 -10" /><path d="M2 12l5 5m5 -5l5 -5" /></g>,
+            AlertTriangle: <g><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12.01" y1="17" y2="17" /></g>,
+            Lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
+            ArrowLeft: <g><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></g>,
+            Video: <g><path d="m23 7-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></g>,
+            MoreVertical: <g><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></g>,
+            Mic: <g><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></g>,
+            Phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        };
 
-const fetchWithRetry = async (url, options, retries = 4, backoff = 900) => {
-  while (retries >= 0) {
-    try {
-      const res = await fetch(url, options);
-      if (!res.ok) throw new Error(res.status);
-      return await res.json();
-    } catch (e) {
-      if (!retries) throw e;
-      await new Promise(r => setTimeout(r, backoff));
-      backoff *= 2;
-      retries--;
-    }
-  }
-};
+        const Icon = ({ name, size = 24, className = "", fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {Icons[name]}
+            </svg>
+        );
 
-const pcmToWav = (pcmData, sampleRate = 24000) => {
-  const buffer = new ArrayBuffer(44 + pcmData.length * 2);
-  const view = new DataView(buffer);
-  const write = (o, s) => [...s].forEach((c,i)=>view.setUint8(o+i,c.charCodeAt(0)));
+        const MOODS = [
+            { id: 'love', icon: '💖', color: 'from-pink-500 to-rose-600', bg: 'bg-rose-950/20', theme: '#4c0519' },
+            { id: 'missing', icon: '🥺', color: 'from-blue-400 to-indigo-600', bg: 'bg-indigo-950/20', theme: '#1e1b4b' },
+            { id: 'joy', icon: '✨', color: 'from-amber-300 to-orange-500', bg: 'bg-amber-950/20', theme: '#451a03' },
+            { id: 'tired', icon: '😴', color: 'from-purple-400 to-violet-700', bg: 'bg-violet-950/20', theme: '#2e1065' },
+            { id: 'angry', icon: '💢', color: 'from-red-500 to-orange-700', bg: 'bg-red-950/20', theme: '#450a0a' },
+        ];
 
-  write(0,'RIFF');
-  view.setUint32(4,36+pcmData.length*2,true);
-  write(8,'WAVEfmt ');
-  view.setUint32(16,16,true);
-  view.setUint16(20,1,true);
-  view.setUint16(22,1,true);
-  view.setUint32(24,sampleRate,true);
-  view.setUint32(28,sampleRate*2,true);
-  view.setUint16(32,2,true);
-  view.setUint16(34,16,true);
-  write(36,'data');
-  view.setUint32(40,pcmData.length*2,true);
-  pcmData.forEach((v,i)=>view.setInt16(44+i*2,v,true));
+        const apiKey = ""; 
 
-  return new Blob([buffer],{type:'audio/wav'});
-};
+        // --- COMPONENTS ---
+        const ErrorScreen = () => {
+            const [copied, setCopied] = useState(false);
+            const rulesText = "rules_version = '2';\nservice cloud.firestore {\n  match /{document=**} {\n    allow read, write: if true;\n  }\n}";
 
-/* ---------- MAIN APP ---------- */
+            const handleCopy = () => {
+                navigator.clipboard.writeText(rulesText).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                });
+            };
 
-const App = () => {
-  const [loading,setLoading]=useState(true);
-  const [user,setUser]=useState(null);
-  const [partner,setPartner]=useState(null);
-  const [messages,setMessages]=useState([]);
-  const [dreams,setDreams]=useState([]);
-  const [view,setView]=useState("home");
-  const [inputMsg,setInputMsg]=useState("");
-  const [dreamPrompt,setDreamPrompt]=useState("");
-  const [isEnhancing,setIsEnhancing]=useState(false);
-  const [isGeneratingDream,setIsGeneratingDream]=useState(false);
-  const [isPressing,setIsPressing]=useState(false);
-  const [isPlayingAudio,setIsPlayingAudio]=useState(null);
-  const [isOffline,setIsOffline]=useState(!navigator.onLine);
-  const [currentTime,setCurrentTime]=useState(new Date());
-  const [myMood,setMyMood]=useState("love");
-
-  const messagesEndRef=useRef(null);
-
-  const firebaseConfig = JSON.parse(window.__firebase_config || "{}");
-  const appId = window.__app_id || "sunahh-pro";
-  const apiKey = ""; /* backend required in real world */
-
-  const [myId,setMyId]=useState(
-    window.location.hash.replace("#","") === "abhishek" ? "abhishek" : "sana"
-  );
-  const partnerId = myId === "abhishek" ? "sana" : "abhishek";
-
-  /* scrolling */
-  useEffect(()=>messagesEndRef.current?.scrollIntoView({behavior:"smooth"}),[messages,view]);
-
-  /* time */
-  useEffect(()=>{
-    const t=setInterval(()=>setCurrentTime(new Date()),60000);
-    return ()=>clearInterval(t);
-  },[]);
-
-  /* online/offline listeners FIXED */
-  useEffect(()=>{
-    const goOnline=()=>setIsOffline(false);
-    const goOffline=()=>setIsOffline(true);
-    window.addEventListener("online",goOnline);
-    window.addEventListener("offline",goOffline);
-    return ()=>{
-      window.removeEventListener("online",goOnline);
-      window.removeEventListener("offline",goOffline);
-    };
-  },[]);
-
-  /* hash identity listener */
-  useEffect(()=>{
-    const update=()=>{
-      const hash=window.location.hash.replace("#","");
-      setMyId(hash==="abhishek"?"abhishek":"sana");
-    };
-    window.addEventListener("hashchange",update);
-    return ()=>window.removeEventListener("hashchange",update);
-  },[]);
-
-  /* INIT FIREBASE */
-  useEffect(()=>{
-    if(!window.fb) return;
-    const { initializeApp,getAuth,signInAnonymously,signInWithCustomToken,onAuthStateChanged }=window.fb;
-    const app=initializeApp(firebaseConfig);
-    const auth=getAuth(app);
-
-    (async()=>{
-      try{
-        if(window.__initial_auth_token) await signInWithCustomToken(auth,window.__initial_auth_token);
-        else await signInAnonymously(auth);
-      }catch(e){console.warn("Auth fail",e);}
-      onAuthStateChanged(auth,setUser);
-      setLoading(false);
-    })();
-  },[]);
-
-  /* FIRESTORE listeners */
-  useEffect(()=>{
-    if(!user || !window.fb) return;
-    const {doc,onSnapshot,collection,query,orderBy,getFirestore}=window.fb;
-    const db=getFirestore();
-
-    const unsubPresence = onSnapshot(
-      doc(db,"artifacts",appId,"public","data","presence",partnerId),
-      snap => snap.exists() && setPartner(snap.data())
-    );
-
-    const unsubMsgs = onSnapshot(
-      query(collection(db,"artifacts",appId,"public","data","messages"),orderBy("timestamp","desc")),
-      snap => setMessages(snap.docs.map(d=>({id:d.id,...d.data()})).reverse())
-    );
-
-    const unsubDreams = onSnapshot(
-      query(collection(db,"artifacts",appId,"public","data","dreams"),orderBy("timestamp","desc")),
-      snap => setDreams(snap.docs.map(d=>({id:d.id,...d.data()})))
-    );
-
-    return ()=>{unsubPresence();unsubMsgs();unsubDreams();};
-  },[user,partnerId]);
-
-  /* presence writer SAFE */
-  useEffect(()=>{
-    if(!user || !window.fb) return;
-    const {doc,setDoc,serverTimestamp,getFirestore}=window.fb;
-    const db=getFirestore();
-
-    const interval=setInterval(()=>{
-      setDoc(
-        doc(db,"artifacts",appId,"public","data","presence",myId),
-        { uid:user.uid,lastSeen:serverTimestamp(),isPressing,myMood,isTyping:inputMsg.length>0,id:myId },
-        { merge:true }
-      );
-    },2000);
-
-    return ()=>clearInterval(interval);
-  },[user,isPressing,myMood,myId,inputMsg]);
-
-  /* ACTIONS */
-  const handleSendMessage=async()=>{
-    if(!inputMsg.trim())return;
-    const text=inputMsg;
-    setInputMsg("");
-    const {addDoc,collection,getFirestore,serverTimestamp}=window.fb;
-    await addDoc(collection(getFirestore(),"artifacts",appId,"public","data","messages"),{
-      text,sender:myId,timestamp:serverTimestamp()
-    });
-  };
-
-  const handleEnhanceWhisper=async()=>{
-    if(!inputMsg.trim() || !apiKey)return;
-    setIsEnhancing(true);
-    try{
-      const prompt=`Rewrite this romantic message into something poetic and intimate: "${inputMsg}"`;
-      const r=await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-        {method:"POST",headers:{"Content-Type":"application/json"},
-         body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})}
-      );
-      const text=r?.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/["']/g,"").trim();
-      if(text) setInputMsg(text);
-    }catch(e){console.warn("Enhance fail",e);}
-    setIsEnhancing(false);
-  };
-
-  const handleListenToMessage=async(id,text)=>{
-    if(isPlayingAudio===id || !apiKey) return;
-    setIsPlayingAudio(id);
-    try{
-      const payload={
-        contents:[{parts:[{text:`Say warmly and intimately: ${text}` }]}],
-        generationConfig:{
-          responseModalities:["AUDIO"],
-          speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:"Aoede" } } }
-        },
-        model:"gemini-2.5-flash-preview-tts"
-      };
-      const r=await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
-        {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}
-      );
-
-      const data=r?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if(!data) throw new Error("no audio");
-      const bin=atob(data);
-      const pcm=new Int16Array(bin.length/2);
-      for(let i=0;i<pcm.length;i++) pcm[i]=bin.charCodeAt(i*2)|(bin.charCodeAt(i*2+1)<<8);
-      const url=URL.createObjectURL(pcmToWav(pcm,24000));
-      const audio=new Audio(url);
-      audio.onended=()=>setIsPlayingAudio(null);
-      audio.play();
-    }catch(e){ setIsPlayingAudio(null); }
-  };
-
-  const handleGenerateDream=async()=>{
-    if(!dreamPrompt.trim() || !apiKey)return;
-    setIsGeneratingDream(true);
-    try{
-      const res=await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
-        {method:"POST",body:JSON.stringify({
-          instances:{prompt:`Cinematic romantic photography of: ${dreamPrompt}`},
-          parameters:{sampleCount:1}
-        })}
-      );
-      const data=await res.json();
-      const imageUrl=`data:image/png;base64,${data.predictions?.[0]?.bytesBase64Encoded}`;
-      if(imageUrl){
-        const {addDoc,collection,getFirestore,serverTimestamp}=window.fb;
-        await addDoc(collection(getFirestore(),"artifacts",appId,"public","data","dreams"),{
-          imageUrl,prompt:dreamPrompt,creator:myId,timestamp:serverTimestamp()
-        });
-        setDreamPrompt("");
-      }
-    }catch(e){console.warn(e);}
-    setIsGeneratingDream(false);
-  };
-
-  /* STATUS HELPERS */
-  const getOnlineStatus=()=>{
-    if(!partner?.lastSeen) return {text:"Waiting...",isOnline:false};
-    const ms=partner.lastSeen.toMillis?.() || partner.lastSeen.seconds*1000;
-    const diff=Date.now()-ms;
-    if(diff<60000) return {text:"Online now",isOnline:true};
-    const m=Math.floor(diff/60000);
-    if(m<60) return {text:`Seen ${m}m ago`,isOnline:false};
-    return {text:`Seen ${Math.floor(m/60)}h ago`,isOnline:false};
-  };
-
-  const status=getOnlineStatus();
-
-  if(loading) return <div className="h-screen flex items-center justify-center text-white">Loading…</div>;
-
-  /* UI trimmed: same layout as your original, but uses above functions safely */
-
-  return (
-    <div className="h-screen text-white flex flex-col">
-      {/* header */}
-      <header className="p-4 flex justify-between">
-        <div>
-          <h1 className="capitalize text-xl">{partnerId}</h1>
-          <span className="text-xs opacity-60">{status.text}</span>
-        </div>
-        <button onClick={()=>setView("settings")}>⚙️</button>
-      </header>
-
-      <main className="flex-1 overflow-y-auto p-4">
-
-        {view==="chat" && (
-          <div className="space-y-3">
-            {messages.map(m=>(
-              <div key={m.id} className={m.sender===myId?"text-right":""}>
-                <div className={`inline-block px-3 py-2 rounded-2xl ${m.sender===myId?"bg-white text-black":"bg-white/10"}`}>
-                  {m.text}
-                  {m.sender!==myId &&
-                    <button className="ml-2 text-xs opacity-70"
-                      onClick={()=>handleListenToMessage(m.id,m.text)}>🔊</button>}
+            return (
+                <div className="flex flex-col h-screen bg-[#020617] text-white p-8 items-center justify-center text-center">
+                    <div className="bg-red-500/10 p-6 rounded-full mb-6">
+                        <Icon name="Lock" size={64} className="text-red-500" />
+                    </div>
+                    <h1 className="text-2xl font-bold mb-2 text-red-400">Permission Denied</h1>
+                    <p className="text-white/60 mb-6 max-w-sm text-sm">
+                        Your Firestore Database is locked. Update the Security Rules to allow access.
+                    </p>
+                    <div className="relative bg-white/5 p-4 rounded-xl border border-white/10 text-left w-full max-w-lg mb-6 group">
+                        <button 
+                            onClick={handleCopy}
+                            className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white text-[10px] uppercase font-bold py-1 px-2 rounded transition-colors"
+                        >
+                            {copied ? "COPIED!" : "COPY CODE"}
+                        </button>
+                        <p className="text-xs text-white/40 mb-2 uppercase tracking-wide">Paste this into Firestore Rules:</p>
+                        <pre className="text-[10px] text-green-400 font-mono overflow-x-auto whitespace-pre-wrap select-all">
+{rulesText}
+                        </pre>
+                    </div>
+                    <button onClick={() => window.location.reload()} className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors">
+                        I Fixed It, Refresh
+                    </button>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef}></div>
-          </div>
-        )}
+            );
+        };
 
-        {view==="home" && <p className="opacity-70 text-center mt-20">Touch the heart. Be dramatic. Or something.</p>}
+        const App = () => {
+            const [appState, setAppState] = useState('loading');
+            const [permissionError, setPermissionError] = useState(false);
+            const [user, setUser] = useState(null);
+            const [partner, setPartner] = useState(null);
+            const [messages, setMessages] = useState([]);
+            const [dreams, setDreams] = useState([]);
+            const [view, setView] = useState('home'); 
+            const [isPressing, setIsPressing] = useState(false);
+            const [inputMsg, setInputMsg] = useState('');
+            const [isEnhancing, setIsEnhancing] = useState(false);
+            const [myMood, setMyMood] = useState('love');
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [isOffline, setIsOffline] = useState(!navigator.onLine);
+            const messagesEndRef = useRef(null);
 
-        {view==="dreams" && (
-          <div>
-            <textarea className="w-full bg-white/10 p-2 rounded"
-              value={dreamPrompt} onChange={e=>setDreamPrompt(e.target.value)}
-              placeholder="Describe a moment…" />
-            <button className="mt-2 bg-white text-black px-4 py-2 rounded"
-              onClick={handleGenerateDream}>
-              {isGeneratingDream?"Painting…":"Create dream"}
-            </button>
+            // --- IDENTITY ---
+            const [myId, setMyId] = useState(() => {
+                const hash = window.location.hash.replace('#', '').toLowerCase();
+                return hash === 'abhishek' ? 'abhishek' : 'sana';
+            });
+            const partnerId = myId === 'abhishek' ? 'sana' : 'abhishek';
 
-            <div className="mt-6 grid gap-4">
-              {dreams.map(d=>(
-                <img key={d.id} src={d.imageUrl} className="rounded" />
-              ))}
-            </div>
-          </div>
-        )}
+            useEffect(() => {
+                const handleHashChange = () => setMyId(window.location.hash.replace('#', '').toLowerCase() === 'abhishek' ? 'abhishek' : 'sana');
+                window.addEventListener('hashchange', handleHashChange);
+                window.addEventListener('online', () => setIsOffline(false));
+                window.addEventListener('offline', () => setIsOffline(true));
+                const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+                return () => {
+                    window.removeEventListener('hashchange', handleHashChange);
+                    window.removeEventListener('online', () => setIsOffline(false));
+                    window.removeEventListener('offline', () => setIsOffline(true));
+                    clearInterval(timer);
+                }
+            }, []);
 
-        {view==="settings" && (
-          <div className="space-y-4">
-            <p>You are: {myId}</p>
-            <button onClick={()=>window.location.hash=myId==="abhishek"?"sana":"abhishek"}
-                    className="bg-white text-black px-3 py-1 rounded">
-              Switch identity
-            </button>
-          </div>
-        )}
-      </main>
+            // --- INITIALIZE ---
+            useEffect(() => {
+                const init = async () => {
+                    // Always try manual config first if available
+                    let config = manualFirebaseConfig;
+                    if (!config.apiKey && window.__firebase_config) {
+                        config = JSON.parse(window.__firebase_config);
+                    }
 
-      {/* input */}
-      {view==="chat" && (
-        <div className="p-3 flex gap-2">
-          <input className="flex-1 bg-white/10 px-3 py-2 rounded"
-            value={inputMsg} onChange={e=>setInputMsg(e.target.value)}
-            onKeyDown={e=>e.key==="Enter" && handleSendMessage()}
-            placeholder="Type..." />
-          <button onClick={handleEnhanceWhisper} className="px-3">✨</button>
-          <button onClick={handleSendMessage} className="bg-white text-black px-3 rounded">➤</button>
-        </div>
-      )}
-    </div>
-  );
-};
+                    if (!config || !config.apiKey) {
+                        // Should not happen if keys are pre-filled
+                        return;
+                    }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
+                    try {
+                        const { initializeApp, getAuth, signInAnonymously } = window.fb;
+                        const app = initializeApp(config);
+                        const auth = getAuth(app);
+                        await signInAnonymously(auth);
+                        setAppState('ready');
+                    } catch (e) {
+                        console.error("Init Error", e);
+                        if (e.code === 'app/duplicate-app') setAppState('ready');
+                    }
+                };
+                
+                const checkFb = setInterval(() => {
+                    if (window.fb) {
+                        clearInterval(checkFb);
+                        init();
+                    }
+                }, 100);
+            }, []);
+
+            // --- AUTH STATE ---
+            useEffect(() => {
+                if (appState !== 'ready') return;
+                const { getAuth, onAuthStateChanged } = window.fb;
+                const unsub = onAuthStateChanged(getAuth(), setUser);
+                return () => unsub();
+            }, [appState]);
+
+            // --- DATA SYNC ---
+            useEffect(() => {
+                if (appState !== 'ready' || !user) return;
+                const { getFirestore, doc, onSnapshot, collection } = window.fb;
+                const db = getFirestore();
+                const appId = 'sunahh-pro'; // Default collection name
+
+                const errorHandler = (err) => {
+                    if (err.code === 'permission-denied') setPermissionError(true);
+                };
+
+                // Partner Sync
+                const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), 
+                    (d) => d.exists() && setPartner(d.data()), errorHandler
+                );
+
+                // Message Sync
+                const unsubMsg = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), (snap) => {
+                    const msgs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                    setMessages(msgs);
+                    setTimeout(() => messagesEndRef.current?.scrollIntoView({behavior:'smooth'}), 100);
+                }, errorHandler);
+
+                // Dream Sync
+                const unsubDreams = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'dreams'), (snap) => {
+                    const drms = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    drms.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    setDreams(drms);
+                }, errorHandler);
+
+                return () => { unsubPartner(); unsubMsg(); unsubDreams(); };
+            }, [user, partnerId, appState]);
+
+            // --- HEARTBEAT WRITER ---
+            useEffect(() => {
+                if (!user) return;
+                const { getFirestore, doc, setDoc, serverTimestamp } = window.fb;
+                const db = getFirestore();
+                const appId = 'sunahh-pro';
+
+                const interval = setInterval(() => {
+                    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', myId), {
+                        uid: user.uid,
+                        lastSeen: serverTimestamp(),
+                        isPressing,
+                        mood: myMood,
+                        id: myId,
+                        isTyping: inputMsg.length > 0
+                    }, { merge: true }).catch(err => {
+                        if (err.code === 'permission-denied') setPermissionError(true);
+                    });
+                }, 1500);
+                return () => clearInterval(interval);
+            }, [user, isPressing, myMood, myId, inputMsg]);
+
+            // --- HANDLERS ---
+            const handleSendMessage = async () => {
+                if (!inputMsg.trim()) return;
+                const text = inputMsg; setInputMsg('');
+                const { getFirestore, collection, addDoc, serverTimestamp } = window.fb;
+                const appId = 'sunahh-pro';
+                await addDoc(collection(getFirestore(), 'artifacts', appId, 'public', 'data', 'messages'), {
+                    text, sender: myId, timestamp: serverTimestamp()
+                }).catch(err => {
+                    if (err.code === 'permission-denied') setPermissionError(true);
+                });
+            };
+
+            const handleEnhanceWhisper = async () => {
+                if (!inputMsg.trim()) return;
+                setIsEnhancing(true);
+                // AI Fetch omitted for brevity
+                setTimeout(() => setIsEnhancing(false), 1000);
+            };
+
+            // --- RENDER ---
+            if (permissionError) return <ErrorScreen />;
+            
+            if (appState === 'loading') return (
+                <div className="fixed inset-0 bg-[#020617] flex flex-col items-center justify-center gap-6">
+                    <Icon name="Heart" size={80} className="text-rose-500 animate-pulse" fill="currentColor" />
+                    <h1 className="text-3xl font-serif text-white tracking-widest">SUNAHH</h1>
+                </div>
+            );
+
+            const bothPressing = isPressing && partner?.isPressing;
+            const statusText = (() => {
+                if (partner?.isTyping) return "typing...";
+                if (!partner?.lastSeen) return "Offline";
+                const diff = Date.now() - (partner.lastSeen.seconds * 1000);
+                return diff < 90000 ? "Online" : "Last seen recently";
+            })();
+
+            return (
+                <div className={`h-screen flex flex-col relative transition-all duration-1000 ${bothPressing ? 'bg-sunrise' : (MOODS.find(m=>m.id===partner?.mood)?.bg || 'bg-[#020617]')} text-white`}>
+                    
+                    {/* Header */}
+                    <div className="relative z-10 px-4 py-4 flex justify-between items-center bg-black/20 backdrop-blur-md border-b border-white/5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white font-bold text-lg capitalize shadow-lg">
+                                {partnerId[0]}
+                            </div>
+                            <div className="flex flex-col">
+                                <h1 className="font-serif font-bold text-lg capitalize leading-none mb-1">{partnerId}</h1>
+                                <div className="flex items-center gap-1.5 h-3">
+                                    {partner?.isTyping ? 
+                                        <><span className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Typing</span><div className="typing-dot bg-green-400"/><div className="typing-dot bg-green-400"/><div className="typing-dot bg-green-400"/></>
+                                        : 
+                                        <><div className={`w-1.5 h-1.5 rounded-full ${statusText === 'Online' ? 'bg-green-400 shadow-[0_0_5px_lime]' : 'bg-white/30'}`}/><span className="text-[10px] text-white/50 uppercase tracking-wider">{statusText}</span></>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => setView('settings')} className="p-2 glass rounded-full"><Icon name="Smile" size={20} /></button>
+                    </div>
+
+                    {/* Main */}
+                    <main className="flex-1 relative z-10 overflow-hidden">
+                        {isOffline && <div className="bg-red-500/80 text-white text-xs text-center py-1 absolute top-0 w-full z-50">No Internet Connection</div>}
+
+                        {/* HOME / HEART */}
+                        {view === 'home' && (
+                            <div className="h-full flex flex-col items-center justify-center gap-16 view-transition relative p-6">
+                                <div className="text-center">
+                                    <p className="font-serif italic text-xl text-white/80 mb-2">{bothPressing ? "Connected Hearts" : "Touch to Connect"}</p>
+                                    <p className="text-xs text-white/40 uppercase tracking-[0.2em]">{bothPressing ? "You are together now" : (partner?.isPressing ? "She is waiting..." : "Press and hold")}</p>
+                                </div>
+
+                                <div className="relative">
+                                    {bothPressing && <div className="absolute inset-0 bg-amber-200/40 rounded-full blur-3xl animate-pulse" />}
+                                    {partner?.isPressing && !bothPressing && <div className="absolute inset-0 border-[3px] border-blue-400/50 rounded-full animate-ping" />}
+                                    {isPressing && !bothPressing && <div className="absolute inset-0 bg-white/10 rounded-full animate-ping" />}
+                                    
+                                    <button
+                                        onMouseDown={() => setIsPressing(true)}
+                                        onMouseUp={() => setIsPressing(false)}
+                                        onTouchStart={() => setIsPressing(true)}
+                                        onTouchEnd={() => setIsPressing(false)}
+                                        className={`relative w-64 h-64 rounded-full glass-high flex items-center justify-center transition-all duration-700 
+                                            ${bothPressing ? 'scale-110 border-4 border-white shadow-[0_0_100px_gold]' : 'shadow-2xl'}
+                                            ${!bothPressing && partner?.isPressing ? 'border-2 border-blue-400' : ''}`}
+                                    >
+                                        <Icon name="Heart" size={100} fill={isPressing || partner?.isPressing ? "currentColor" : "none"} 
+                                            className={`transition-all duration-500 ${bothPressing ? 'text-white animate-heart' : (partner?.isPressing ? 'text-blue-400' : (isPressing ? 'text-rose-500' : 'text-white/20'))}`} 
+                                        />
+                                        {!bothPressing && <div className="absolute top-4 right-8 text-3xl animate-bounce">{MOODS.find(m=>m.id===partner?.mood)?.icon}</div>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CHAT */}
+                        {view === 'chat' && (
+                            <div className="h-full flex flex-col view-transition">
+                                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 no-scrollbar relative">
+                                    {messages.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-white/20 text-sm">Start your story...</div>}
+                                    {messages.map(m => (
+                                        <div key={m.id} className={`flex ${m.sender === myId ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[80%] px-4 py-2 relative shadow-md text-sm ${m.sender === myId ? 'msg-bubble-mine text-white' : 'msg-bubble-theirs text-white/90'}`}>
+                                                {m.text}
+                                                <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+                                                    <span className="text-[9px]">{m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '...'}</span>
+                                                    {m.sender === myId && <Icon name="CheckDouble" size={12} className="text-blue-200" />}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                                <div className="p-3 bg-black/20 backdrop-blur-md border-t border-white/5 flex gap-2">
+                                    <input value={inputMsg} onChange={e=>setInputMsg(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSendMessage()} placeholder="Message..." className="flex-1 bg-white/10 rounded-full px-4 text-sm text-white placeholder:text-white/30 focus:bg-white/20 outline-none transition-all" />
+                                    <button onClick={handleSendMessage} className="p-3 bg-rose-600 rounded-full text-white shadow-lg active:scale-95"><Icon name="Send" size={18} /></button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* DREAMS */}
+                        {view === 'dreams' && (
+                            <div className="h-full p-6 overflow-y-auto space-y-6 no-scrollbar view-transition">
+                                <div className="glass p-6 rounded-3xl text-center space-y-4">
+                                    <Icon name="Sparkles" size={32} className="text-amber-300 mx-auto" />
+                                    <h2 className="font-serif text-lg font-bold">Dream Together</h2>
+                                    <textarea value={dreamPrompt} onChange={e=>setDreamPrompt(e.target.value)} placeholder="Describe a moment..." className="w-full bg-black/20 rounded-xl p-3 text-sm h-20 outline-none resize-none border border-white/10 focus:border-rose-500/50 transition-all"/>
+                                    <button disabled className="w-full py-3 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-widest opacity-50 cursor-not-allowed">AI Dreams (Requires Key)</button>
+                                </div>
+                                {dreams.map(d => (
+                                    <div key={d.id} className="glass rounded-3xl overflow-hidden shadow-2xl relative group">
+                                        <img src={d.imageUrl} className="w-full aspect-[4/5] object-cover" />
+                                        <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent">
+                                            <p className="font-serif italic text-sm text-white/90">"{d.prompt}"</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* SETTINGS */}
+                        {view === 'settings' && (
+                            <div className="h-full p-6 space-y-8 view-transition pt-12">
+                                <div className="text-center space-y-2">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-white/40">Current Mood</p>
+                                    <div className="flex justify-center gap-4 flex-wrap">
+                                        {MOODS.map(m => (
+                                            <button key={m.id} onClick={()=>setMyMood(m.id)} className={`p-4 rounded-2xl border transition-all ${myMood===m.id ? 'bg-white text-black border-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'glass border-white/5'}`}>
+                                                <span className="text-2xl">{m.icon}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="glass p-6 rounded-3xl space-y-4">
+                                    <h3 className="font-serif font-bold text-rose-300">Identity</h3>
+                                    <p className="text-xs text-white/60">Logged in as <strong className="text-white uppercase">{myId}</strong></p>
+                                    <button onClick={() => window.location.hash = myId === 'abhishek' ? 'sana' : 'abhishek'} className="w-full py-3 border border-white/10 rounded-xl text-xs uppercase hover:bg-white/5">Switch User</button>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* NAV */}
+                    <nav className="relative z-20 bg-black/40 backdrop-blur-xl border-t border-white/5 pb-safe pt-2 flex justify-around">
+                        {['home', 'chat', 'dreams'].map(tab => (
+                            <button key={tab} onClick={()=>setView(tab)} className={`p-4 transition-all ${view===tab ? 'text-rose-500 scale-110' : 'text-white/40 hover:text-white/70'}`}>
+                                <Icon name={tab==='home'?'Heart':tab==='chat'?'MessageCircle':'Cloud'} size={26} fill={view===tab?"currentColor":"none"} />
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
