@@ -7,9 +7,7 @@ import {
   onSnapshot, 
   collection, 
   addDoc, 
-  serverTimestamp,
-  query,
-  orderBy
+  serverTimestamp 
 } from 'firebase/firestore';
 import { 
   getAuth, 
@@ -43,7 +41,8 @@ import {
   Compass,
   Trophy,
   Activity,
-  Layers
+  Moon,
+  Clock
 } from 'lucide-react';
 
 // --- CONFIG & CONSTANTS ---
@@ -55,12 +54,12 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'sunahh-pro';
 
 // --- THE ABHISANA TIMELINE ---
-const START_DATE = new Date('2024-11-03'); 
+const ANNIVERSARY = new Date('2024-11-03'); 
 
 const MOODS = [
   { id: 'happy', icon: '✨', label: 'Radiant', bg: 'from-amber-50 via-white to-orange-50', color: 'text-amber-600' },
@@ -83,31 +82,38 @@ const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [permissionError, setPermissionError] = useState(false);
-  const [sharedPromise, setSharedPromise] = useState("Holding space for us...");
+  const [sharedPromise, setSharedPromise] = useState("Protecting our peace, always.");
 
   const messagesEndRef = useRef(null);
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
 
+  // Identity logic
   const myId = useMemo(() => {
     const hash = window.location.hash.replace('#', '').toLowerCase();
     return hash === 'abhishek' ? 'abhishek' : 'sana';
   }, []);
   const partnerId = myId === 'abhishek' ? 'sana' : 'abhishek';
 
-  // --- IDENTITY ---
   const myName = myId === 'abhishek' ? 'Abhishek' : 'Sana';
   const partnerName = partnerId === 'abhishek' ? 'Abhishek' : 'Sana';
-  
-  // --- COUNTERS ---
+  const partnerNickname = partnerId === 'abhishek' ? 'My Sun' : 'My Moon';
+
+  // --- CALCULATIONS ---
   const daysTogether = useMemo(() => {
-    const diff = Math.abs(new Date() - START_DATE);
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
+    return Math.floor(Math.abs(new Date() - ANNIVERSARY) / (1000 * 60 * 60 * 24));
   }, []);
 
-  // --- AUTH & DATA INIT ---
+  const nextMonthversary = useMemo(() => {
+    const today = new Date();
+    const nextDate = new Date(today.getFullYear(), today.getMonth() + (today.getDate() >= 3 ? 1 : 0), 3);
+    const diff = nextDate - today;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }, []);
+
+  // --- AUTHENTICATION ---
   useEffect(() => {
-    const initAuth = async () => {
+    const performAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
@@ -115,47 +121,28 @@ const App = () => {
           await signInAnonymously(auth);
         }
       } catch (err) {
-        setUser({ uid: 'local-' + myId });
+        setUser({ uid: 'session-' + myId, isAnonymous: true });
       }
     };
-    initAuth();
-    const unsub = onAuthStateChanged(auth, (u) => u && setUser(u));
-    return () => unsub();
+    performAuth();
+    onAuthStateChanged(auth, (u) => u && setUser(u));
   }, [myId]);
 
+  // --- DATA SYNC ---
   useEffect(() => {
     if (!user) return;
-    const updatePresence = async () => {
-      try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', myId), {
-          uid: user.uid,
-          lastSeen: serverTimestamp(),
-          isPressing,
-          mood: myMood,
-          id: myId,
-          isTyping: inputMsg.length > 0,
-          currentView: view
-        }, { merge: true });
-      } catch (err) {
-        if (err.code === 'permission-denied') setPermissionError(true);
-      }
-    };
-    const interval = setInterval(updatePresence, 2000);
-    return () => clearInterval(interval);
-  }, [user, isPressing, myMood, inputMsg, myId, view]);
 
-  useEffect(() => {
-    if (!user) return;
-    
-    const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), (doc) => setPartner(doc.data()));
-    
+    const unsubPartner = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'presence', partnerId), (doc) => {
+      if (doc.exists()) setPartner(doc.data());
+    });
+
     const msgsQuery = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
     const unsubMsgs = onSnapshot(msgsQuery, (snap) => {
       const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
       setMessages(msgs);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    });
+    }, (err) => err.code === 'permission-denied' && setPermissionError(true));
 
     const unsubMoments = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'moments'), (snap) => {
       const mms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -167,22 +154,40 @@ const App = () => {
       if(d.exists()) setSharedPromise(d.data().text);
     });
 
-    setTimeout(() => setLoading(false), 1000);
+    setTimeout(() => setLoading(false), 1200);
     return () => { unsubPartner(); unsubMsgs(); unsubMoments(); unsubPromise(); };
   }, [user, partnerId]);
 
-  // --- ACTIONS ---
-  const handleSendMessage = async (customText = null) => {
-    const text = customText || inputMsg;
+  // --- PRESENCE WRITER ---
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(async () => {
+      try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', myId), {
+          uid: user.uid,
+          lastSeen: serverTimestamp(),
+          isPressing,
+          mood: myMood,
+          id: myId,
+          isTyping: inputMsg.length > 0,
+          currentView: view
+        }, { merge: true });
+      } catch (e) {}
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [user, isPressing, myMood, inputMsg, myId, view]);
+
+  // --- HANDLERS ---
+  const handleSendMessage = async (text = inputMsg) => {
     if (!text.trim()) return;
     setInputMsg('');
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), {
-      text, sender: myId, timestamp: serverTimestamp(), isNudge: !!customText
+      text, sender: myId, timestamp: serverTimestamp()
     });
   };
 
   const updatePromise = async () => {
-    const newP = prompt("Update our shared promise:", sharedPromise);
+    const newP = prompt("Our new promise for today:", sharedPromise);
     if(newP) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global', 'promise'), {
         text: newP, updatedBy: myId, timestamp: serverTimestamp()
@@ -191,13 +196,13 @@ const App = () => {
   };
 
   const sparkMoment = async (msg) => {
-    if (navigator.vibrate) navigator.vibrate(50);
+    if (navigator.vibrate) navigator.vibrate(40);
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'moments'), {
       text: msg.text, sender: msg.sender, savedAt: serverTimestamp()
     });
   };
 
-  // --- AUDIO ---
+  // --- VOICE ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -208,7 +213,7 @@ const App = () => {
       mediaRecorder.current.start();
       setIsRecording(true);
       if(navigator.vibrate) navigator.vibrate(60);
-    } catch (err) { alert("Mic access required for whispers."); }
+    } catch (err) { alert("Mic access required."); }
   };
 
   const stopRecording = () => {
@@ -243,49 +248,62 @@ const App = () => {
   const bothPressing = isPressing && partner?.isPressing;
   const partnerOnline = partner?.lastSeen && (Date.now() - partner.lastSeen.seconds * 1000 < 60000);
 
+  if (permissionError) return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center p-8 bg-slate-50 text-center font-sans">
+      <Lock size={48} className="text-amber-400 mb-6" />
+      <h1 className="text-xl font-bold mb-2">Almost there!</h1>
+      <p className="text-slate-400 mb-8 text-sm">Update your Firestore rules to "if true" to unlock your private world.</p>
+      <button onClick={() => window.location.reload()} className="bg-sky-400 text-white px-8 py-3 rounded-2xl font-bold shadow-xl">Refresh Sanctuary</button>
+    </div>
+  );
+
   if (loading) return (
-    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100]">
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100] font-sans">
       <div className="relative mb-8 flex flex-col items-center">
         <Heart size={60} className="text-sky-100 animate-pulse" fill="currentColor" />
-        <h2 className="text-[16px] font-black uppercase tracking-[1.1em] text-slate-400 mt-6 ml-4">Sunahh</h2>
-        <p className="mt-4 text-[9px] font-bold text-slate-200 uppercase tracking-widest">Since Nov 3, 2024</p>
+        <h2 className="text-[18px] font-black uppercase tracking-[1em] text-slate-400 mt-8 ml-4">Sunahh</h2>
+        <p className="mt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Abhi & Sana • Since Nov 3rd 2024</p>
       </div>
     </div>
   );
 
   return (
-    <div className={`fixed inset-0 flex flex-col transition-all duration-1000 font-sans overflow-hidden bg-gradient-to-br ${bothPressing ? 'from-white via-orange-50 to-white' : partnerMoodData.bg}`}>
+    <div className={`fixed inset-0 flex flex-col transition-all duration-1000 overflow-hidden bg-gradient-to-br ${bothPressing ? 'from-amber-50 via-white to-rose-100' : partnerMoodData.bg}`}>
       
       {/* Decorative Atmosphere */}
       <div className="absolute inset-0 pointer-events-none opacity-40 overflow-hidden">
         <div className="absolute top-[-20%] left-[-20%] w-[120%] h-[120%] rounded-full blur-[140px] bg-white animate-soft" />
       </div>
 
-      {/* Main App Container - Responsive Max Width */}
-      <div className="relative z-10 w-full h-full max-w-5xl mx-auto flex flex-col md:border-x md:border-white/20 md:shadow-2xl bg-white/5 backdrop-blur-sm">
+      {/* Responsive Wrapper */}
+      <div className="relative z-10 w-full h-full max-w-5xl mx-auto flex flex-col md:border-x md:border-white/20 md:shadow-2xl bg-white/10 backdrop-blur-md">
         
         {/* Sanctuary Header */}
         <header className="flex-none px-6 py-5 md:py-8 flex justify-between items-center bg-white/20 backdrop-blur-3xl border-b border-white/40 pt-[max(env(safe-area-inset-top),1.5rem)]">
           <div className="flex items-center gap-5">
             <div className="relative group cursor-pointer" onClick={() => setView('settings')}>
-              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-[1.8rem] bg-white shadow-2xl flex items-center justify-center text-4xl border-2 border-white transition-all duration-700 ${partner?.isPressing ? 'scale-110 rotate-12' : ''}`}>
+              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-[1.8rem] bg-white shadow-xl flex items-center justify-center text-4xl border-2 border-white transition-all duration-700 ${partner?.isPressing ? 'scale-110 rotate-12' : ''}`}>
                 {partnerMoodData.icon}
               </div>
               {partnerOnline && (
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 border-[4px] border-white rounded-full shadow-lg" />
               )}
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="font-serif font-black text-slate-900 text-xl md:text-2xl capitalize tracking-tighter leading-none">
-                My {partnerName}
+                {partnerNickname}
               </h1>
-              <p className={`text-[9px] md:text-[10px] mt-2 uppercase font-black tracking-[0.3em] transition-colors ${partner?.isTyping ? 'text-sky-500' : 'text-slate-400/60'}`}>
-                {partner?.isTyping ? "Whispering..." : (partnerOnline ? "Breathing with you" : "Resting quietly")}
+              <p className={`text-[10px] mt-2 uppercase font-black tracking-[0.3em] transition-colors ${partner?.isTyping ? 'text-sky-500' : 'text-slate-400/60'}`}>
+                {partner?.isTyping ? "Whispering..." : (partnerOnline ? "Right beside you" : "Resting quietly")}
               </p>
+            </div>
+            <div className="block sm:hidden">
+               <h1 className="font-serif font-black text-slate-900 text-lg tracking-tight capitalize">{partnerName}</h1>
+               <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">{partnerOnline ? "Connected" : "Away"}</p>
             </div>
           </div>
           <div className="flex gap-2.5">
-             <button onClick={() => handleSendMessage(`⭐ Close your eyes, I'm thinking of you...`)} className="w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-2xl bg-white/70 text-rose-300 border border-white shadow-sm active:scale-75 transition-all">
+             <button onClick={() => handleSendMessage(`⭐ Thinking of you deeply...`)} className="w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-2xl bg-white/70 text-rose-300 border border-white shadow-sm active:scale-75 transition-all">
                <Star size={20} fill="currentColor" />
              </button>
              <button onClick={() => setView('settings')} className="w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-2xl bg-white/70 text-slate-400 border border-white shadow-sm active:scale-75 transition-all">
@@ -297,21 +315,21 @@ const App = () => {
         {/* Viewport Content */}
         <main className="flex-1 relative overflow-hidden flex flex-col">
           
-          {/* HOME: The AbhiSana Connection */}
+          {/* HOME */}
           {view === 'home' && (
             <div className="flex-1 flex flex-col items-center justify-between p-8 md:p-12 pb-20 view-transition overflow-y-auto no-scrollbar">
               <div className="text-center space-y-4 md:mt-4">
                 <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-white/70 rounded-full border border-white shadow-lg">
                   <Flame size={16} className="text-orange-400 animate-pulse" />
-                  <span className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">The Soul Link is Active</span>
+                  <span className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">Eternal Link: Verified</span>
                 </div>
-                <h2 className="font-serif text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-tight">Welcome Home, {myName}</h2>
-                <p className="text-slate-400 text-sm md:text-base font-serif italic px-6 md:px-24 leading-relaxed max-w-2xl mx-auto">
-                  {partner?.isPressing ? `${partnerName} is holding her screen, reaching across the miles...` : `We've shared ${daysTogether} beautiful days since November 3rd.`}
+                <h2 className="font-serif text-4xl md:text-6xl font-black text-slate-900 tracking-tighter text-center">Hello, {myName}</h2>
+                <p className="text-slate-400 text-sm md:text-base font-serif italic px-6 md:px-24 leading-relaxed max-w-2xl mx-auto text-center">
+                  {partner?.isPressing ? `${partnerName} is holding her screen, reaching for you...` : `We have shared ${daysTogether} beautiful sunsets together since Nov 3rd.`}
                 </p>
               </div>
 
-              {/* Central Connection Point */}
+              {/* Heart Sync Point */}
               <div className="relative my-8 md:my-10">
                 {bothPressing && <div className="absolute inset-[-140px] rounded-full bg-white blur-[110px] animate-pulse opacity-100" />}
                 <button
@@ -326,37 +344,46 @@ const App = () => {
                   />
                   <div className="absolute bottom-12 md:bottom-16">
                      <span className={`text-[11px] md:text-[13px] font-black uppercase tracking-[0.6em] transition-all ${bothPressing ? 'text-sky-400 opacity-100 animate-pulse' : 'text-slate-200 opacity-50'}`}>
-                       {bothPressing ? "In Harmony" : "Touch for Warmth"}
+                       {bothPressing ? "Matched" : "Touch Screen"}
                      </span>
                   </div>
                 </button>
               </div>
               
               <div className="w-full max-w-xl flex flex-col gap-4 md:gap-6">
+                 {/* Shared Promise Card */}
                  <div onClick={updatePromise} className="w-full bg-white/70 p-7 rounded-[3rem] border-2 border-white shadow-xl flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all group overflow-hidden">
                     <Anchor size={18} className="text-sky-300 mb-4 group-hover:rotate-45 transition-transform" />
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-2">Today's Sacred Vow</p>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-2">Today's Sacred Promise</p>
                     <p className="text-base font-serif italic font-black text-slate-800 px-6">"{sharedPromise}"</p>
                  </div>
 
-                 <div className="w-full bg-white/50 p-6 rounded-[2.8rem] border border-white flex flex-col items-center text-center shadow-sm">
-                    <InfinityIcon size={20} className="text-rose-300 mb-2" />
-                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Our Journey Together</p>
-                    <p className="text-xl font-black text-slate-800">{daysTogether} Days</p>
+                 {/* Timeline Stats */}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                    <div className="bg-white/50 p-6 rounded-[2.8rem] border border-white flex flex-col items-center text-center shadow-sm">
+                      <InfinityIcon size={20} className="text-rose-300 mb-2" />
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Our Journey</p>
+                      <p className="text-xl font-black text-slate-800">{daysTogether} Days Shared</p>
+                    </div>
+                    <div className="bg-white/50 p-6 rounded-[2.8rem] border border-white flex flex-col items-center text-center shadow-sm">
+                      <Moon size={20} className="text-sky-300 mb-2" />
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Next Monthversary</p>
+                      <p className="text-xl font-black text-slate-800">{nextMonthversary} Days to go</p>
+                    </div>
                  </div>
               </div>
             </div>
           )}
 
-          {/* TALK: The Whisper Channel */}
+          {/* CHAT: Talk View */}
           {view === 'chat' && (
             <div className="flex-1 flex flex-col h-full view-transition bg-white/5 backdrop-blur-xl relative">
               <div className="flex-1 overflow-y-auto px-6 md:px-24 py-12 space-y-12 no-scrollbar">
                 {messages.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center opacity-30 text-slate-400">
                     <Wind size={50} className="mb-8 animate-soft" />
-                    <p className="text-lg font-serif italic text-center px-20 leading-relaxed max-w-md">
-                      Let the words flow, {myName}. Your {partnerName} is listening to every whisper.
+                    <p className="text-lg font-serif italic text-center px-20 leading-relaxed max-w-md text-slate-600">
+                      Start today's story, {myName}. Your {partnerName} is here to listen.
                     </p>
                   </div>
                 )}
@@ -367,14 +394,14 @@ const App = () => {
                       ? 'bg-slate-900 text-white border-slate-800 rounded-[35px] rounded-br-none' 
                       : 'bg-white text-slate-800 border-slate-100 rounded-[35px] rounded-bl-none shadow-lg'
                     }`}>
-                      {m.text && <p className={`text-[16px] font-medium leading-relaxed ${m.isNudge ? 'text-sky-300 italic font-black text-lg' : ''}`}>{m.text}</p>}
+                      {m.text && <p className="text-[16px] font-medium leading-relaxed">{m.text}</p>}
                       {m.audio && (
                         <button onClick={() => playVoice(m.audio, m.id)} className="flex items-center gap-6 py-2">
                           <div className={`p-4 rounded-full ${m.sender === myId ? 'bg-white/10' : 'bg-slate-50 border border-slate-100'}`}>
                             {currentlyPlaying === m.id ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
                           </div>
                           <div className="flex gap-2.5 h-10 items-center">
-                            {[1,2,3,4,5,6,7,8,9,10].map(i => <div key={i} className={`w-1 rounded-full bg-current transition-all duration-500 ${currentlyPlaying === m.id ? 'animate-pulse h-10 opacity-70' : 'h-4 opacity-10'}`} style={{animationDelay: `${i*0.08}s`}} />)}
+                            {[1,2,3,4,5,6,7].map(i => <div key={i} className={`w-1 rounded-full bg-current transition-all duration-500 ${currentlyPlaying === m.id ? 'animate-pulse h-10 opacity-70' : 'h-4 opacity-10'}`} style={{animationDelay: `${i*0.08}s`}} />)}
                           </div>
                         </button>
                       )}
@@ -395,7 +422,7 @@ const App = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Chat Input Bar */}
+              {/* Chat Input Dock */}
               <div className="flex-none p-6 md:px-24 bg-white/70 backdrop-blur-3xl border-t border-white/60 flex items-center gap-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
                 <div className="flex-1 bg-white/50 rounded-[3.5rem] border-2 border-slate-100 px-8 py-1 flex items-center gap-3 shadow-inner group focus-within:bg-white transition-all">
                   <input 
@@ -421,19 +448,19 @@ const App = () => {
             </div>
           )}
 
-          {/* SPARKS: The Shared Gallery */}
+          {/* ARCHIVE */}
           {view === 'dreams' && (
             <div className="flex-1 overflow-y-auto p-10 md:p-24 space-y-16 no-scrollbar view-transition bg-white/5 backdrop-blur-sm">
               <div className="text-center py-4">
-                <h2 className="font-serif text-6xl font-black text-slate-900 tracking-tighter">AbhiSana Wall</h2>
-                <p className="text-[11px] uppercase font-black tracking-[0.8em] text-slate-300 mt-6">Captured Forever</p>
+                <h2 className="font-serif text-6xl font-black text-slate-900 tracking-tighter text-center">Memory Wall</h2>
+                <p className="text-[11px] uppercase font-black tracking-[0.8em] text-slate-400 mt-6 text-center">Every Spark Preserved</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pb-40">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 pb-40">
                 {moments.length === 0 && (
-                  <div className="md:col-span-2 p-24 bg-white/40 rounded-[5rem] border-2 border-white text-center shadow-xl">
+                  <div className="sm:col-span-2 p-24 bg-white/40 rounded-[5rem] border-2 border-white text-center shadow-xl">
                     <Trophy size={50} className="mx-auto text-sky-200 mb-8" />
-                    <p className="italic text-slate-500 text-lg font-serif px-10 leading-relaxed">No shared sparks yet. Press the star icon in your talk to pin a memory here.</p>
+                    <p className="italic text-slate-500 text-lg font-serif px-10 leading-relaxed">No shared sparks yet. Press the star icon in your whispers to pin a memory here.</p>
                   </div>
                 )}
                 {moments.map((mm, i) => (
@@ -444,7 +471,7 @@ const App = () => {
                     </div>
                     <div className="flex justify-between items-end px-4">
                        <div className="space-y-1 text-left">
-                          <p className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Written by {mm.sender}</p>
+                          <p className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Saved by {mm.sender}</p>
                           <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
                             {mm.savedAt ? new Date(mm.savedAt.seconds * 1000).toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'}) : 'Soul Sync'}
                           </p>
@@ -461,8 +488,8 @@ const App = () => {
           {view === 'settings' && (
             <div className="flex-1 p-10 md:px-32 space-y-14 view-transition pt-16 overflow-y-auto no-scrollbar">
               <section className="text-center">
-                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.6em] mb-14">Inner Resonance</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.6em] mb-14">Our Vibration</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
                   {MOODS.map(m => (
                     <button 
                       key={m.id} onClick={() => setMyMood(m.id)} 
@@ -479,19 +506,19 @@ const App = () => {
               
               <section className="bg-white/80 p-14 rounded-[5rem] border-2 border-white shadow-2xl space-y-12 text-center max-w-2xl mx-auto mb-20">
                 <div className="space-y-8">
-                  <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.6em]">Active Soul</p>
+                  <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.6em]">Active Guardian</p>
                   <div className="flex items-center justify-center gap-6 bg-slate-50 p-8 rounded-[2.5rem] shadow-inner border border-slate-100 group">
                      <div className="w-16 h-16 rounded-[2rem] flex items-center justify-center text-white bg-slate-900 shadow-xl group-hover:scale-110 transition-transform">
                         <User size={30} />
                      </div>
-                     <p className="text-2xl font-black text-slate-900 uppercase tracking-[0.4em]">{myName}</p>
+                     <p className="text-2xl font-black text-slate-900 uppercase tracking-[0.4em] capitalize">{myName}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => window.location.hash = partnerId} 
                   className="w-full py-8 rounded-[3rem] bg-slate-900 text-white text-[12px] font-black uppercase tracking-[0.6em] shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
                 >
-                  Switch Role
+                  Switch Identity
                 </button>
               </section>
             </div>
@@ -501,9 +528,9 @@ const App = () => {
         {/* Global Floating Dock Navigation */}
         <nav className="flex-none bg-white/30 backdrop-blur-3xl border-t border-white/60 pt-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] flex justify-around px-12 z-20 md:px-48">
           {[
-            { id: 'home', icon: Coffee, label: 'Sanctuary' },
+            { id: 'home', icon: Coffee, label: 'Soul' },
             { id: 'chat', icon: MessageCircle, label: 'Talk' },
-            { id: 'dreams', icon: Cloud, label: 'Sparks' }
+            { id: 'dreams', icon: Cloud, label: 'Wall' }
           ].map(tab => (
             <button 
               key={tab.id} onClick={() => setView(tab.id)} 
